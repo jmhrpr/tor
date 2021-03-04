@@ -87,7 +87,7 @@ solve_pow(hs_desc_pow_params_t *pow_params,
   blake2b_state S[1];
 
   /* Repeatedly increment the nonce in attempt to find a valid solution. */
-  log_err(LD_REND, "Solving proof of work...",
+  log_err(LD_REND, "Solving proof of work...");
   while (success == 0) {
     /* Calculate S = equix_solve(C || N || E) */
 
