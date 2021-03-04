@@ -7,7 +7,7 @@
  * when a hidden service is defending against DoS attacks.
  **/
 
-typedef unsigned __int128 uint128_t; // HRPR TODO needed?
+typedef unsigned __int128 uint128_t;
 
 #include <stdio.h>
 #include "lib/crypt_ops/crypto_rand.h"
@@ -23,6 +23,7 @@ typedef unsigned __int128 uint128_t; // HRPR TODO needed?
 /** Number of bytes needed to store an equix solution. */
 #define HS_POW_EQX_SOL_LEN 16
 
+/** Helper function to print an EquiX solution */
 static void
 print_solution(const equix_solution *sol)
 {
@@ -33,30 +34,24 @@ print_solution(const equix_solution *sol)
   }
 }
 
+/** Solve the EquiX/blake2b PoW scheme using the parameters in pow_params, and
+ * store the solution in pow_solution_out. Returns 0 on success and -1
+ * otherwise. Called by a client. */
 int
 solve_pow(hs_desc_pow_params_t *pow_params,
           hs_pow_solution_t *pow_solution_out)
 {
   int ret = -1;
-
-  log_err(LD_REND, "C: %s", hex_str(pow_params->seed, 32));
-
   uint128_t nonce;
 
+  /* Generate a random nonce so start with. */
   crypto_rand((char *)&nonce, HS_POW_NONCE_LEN);
 
-  char hex_nonce[HS_POW_NONCE_LEN * 2 + 1];
-  memset(hex_nonce, 0, HS_POW_NONCE_LEN * 2 + 1);
-  base16_encode(hex_nonce, HS_POW_NONCE_LEN * 2 + 1, &nonce, HS_POW_NONCE_LEN);
-  log_err(LD_REND, "N: %s", hex_nonce);
-
-  // Select E (lets just use suggested for now) ((conv little endian))
+  /* Select E (just using suggested for now) */
   uint32_t effort = pow_params->suggested_effort;
-  log_err(LD_REND, "E: %u", effort);
-  log_err(LD_REND, "E (Hex): %s", hex_str(&effort, 4));
 
-  // Build EquiX challenge (C || N || INT_32(E)), following logic of
-  // build_secret_input from hsdesc.c
+  /* Build EquiX challenge (C || N || INT_32(E)), following logic of
+   * build_secret_input from hsdesc.c */
   size_t offset = 0;
   size_t challenge_len = HS_POW_SEED_LEN + HS_POW_NONCE_LEN + sizeof(uint32_t);
   uint8_t *challenge = NULL;
@@ -71,6 +66,16 @@ solve_pow(hs_desc_pow_params_t *pow_params,
   offset += sizeof(uint32_t);
   tor_assert(challenge_len == offset);
 
+  /* Temporary logging */
+  log_err(LD_REND, "C: %s", hex_str(pow_params->seed, 32));
+
+  char hex_nonce[HS_POW_NONCE_LEN * 2 + 1];
+  memset(hex_nonce, 0, HS_POW_NONCE_LEN * 2 + 1);
+  base16_encode(hex_nonce, HS_POW_NONCE_LEN * 2 + 1, &nonce, HS_POW_NONCE_LEN);
+  log_err(LD_REND, "N: %s", hex_nonce);
+  log_err(LD_REND, "E: %u (%s)", effort, hex_str(&effort, 4));
+
+  /* Initialise EquiX and blake2b. */
   uint8_t success = 0;
   uint64_t count = 0;
 
@@ -81,27 +86,10 @@ solve_pow(hs_desc_pow_params_t *pow_params,
   uint8_t hash_result[HS_POW_HASH_LEN];
   blake2b_state S[1];
 
+  /* Repeatedly increment the nonce in attempt to find a valid solution. */
+  log_err(LD_REND, "Solving proof of work...",
   while (success == 0) {
-    // increment nonce
-    // memset(hex_nonce, 0, HS_POW_NONCE_LEN * 2 + 1);
-    // base16_encode(hex_nonce, HS_POW_NONCE_LEN * 2 + 1, &nonce,
-    //               HS_POW_NONCE_LEN);
-    // log_err(LD_REND, "N: %s", hex_nonce);
-    // TODO endianness
-    // memset(hex_nonce, 0, HS_POW_NONCE_LEN * 2 + 1);
-    // base16_encode(hex_nonce, HS_POW_NONCE_LEN * 2 + 1, &nonce,
-    //               HS_POW_NONCE_LEN);
-    // log_err(LD_REND, "N: %s", hex_nonce);
-
-    // add to challenge
-
-    // char hex_challenge[2 * challenge_len + 1];
-    // memset(hex_challenge, 0, 2 * challenge_len + 1);
-    // base16_encode(hex_challenge, 2 * challenge_len + 1, challenge,
-    //               challenge_len);
-    // log_err(LD_REND, "C || N || INT_32(E): %s", hex_challenge);
-
-    // Calculate S = equix_solve(C || N || E)
+    /* Calculate S = equix_solve(C || N || E) */
 
     int num_solutions = 0;
 
@@ -116,77 +104,44 @@ solve_pow(hs_desc_pow_params_t *pow_params,
       memcpy(challenge + sizeof(pow_params->seed), &nonce, HS_POW_NONCE_LEN);
       continue;
     }
-    // else {
-    //   log_err(LD_REND, "EquiX solution: Failed");
-    //   continue;
-    // }
-    // print_solution(&solution[0]);
 
-    // char hex_solution[2 * solution_len + 1];
-    // memset(hex_solution, 0, 2 * solution_len + 1);
-    // base16_encode(hex_solution, 2 * solution_len + 1, solution,
-    //               solution_len);
-    // log_err(LD_REND, "S: %s", hex_solution);
+    /* Calculate R = blake2b(C || N || E || S) */
+    /* HRPR TODO: Does endianness of S matter? */
 
-    // Calculate R = blake2b(C || N || E || S)
-    // TODO: Does endianness of S matter?
-
-    // TODO check this is behaving correctly (i.e. concat above correct)
+    // HRPR TODO check this is behaving correctly (i.e. concat above correct)
     if (blake2b_init(S, HS_POW_HASH_LEN) < 0)
-      return -1; // TODO
+      return -1;
     blake2b_update(S, challenge, challenge_len);
     blake2b_update(S, &solution[0], HS_POW_EQX_SOL_LEN);
     blake2b_final(S, hash_result, HS_POW_HASH_LEN);
-    // log_err(LD_REND, "blake2b with 2 update: %s", hex_str(hash_result,
-    // HS_POW_HASH_LEN));
 
-    // check if R * E > UINT32_MAX
-    // uint32_t hash_result_netorder = 0; // TODO do we need to take into
-    // account endianness here? set_uint32(&hash_result_netorder,
-    // tor_htonl(get_uint32(hash_result)));
+    /* Check if R * E <= UINT32_MAX, succeed if so. */
     uint32_t hash_result_netorder =
-        tor_htonl(get_uint32(hash_result)); // convert straight
+        tor_htonl(get_uint32(hash_result)); // TODO
     if ((uint64_t)hash_result_netorder * effort <= UINT32_MAX) {
-      log_err(LD_REND, "Success: R*E <= UINT32_MAX");
       success = 1;
-      log_err(LD_REND, "R: %#06x", get_uint32(hash_result));
-      log_err(LD_REND, "INT_32(R): %#06x", hash_result_netorder);
-      log_err(LD_REND, "INT_32(R)*E = %lu",
-              (uint64_t)hash_result_netorder * effort);
-      log_err(LD_REND, "UINT32_MAX: %u", UINT32_MAX);
-      log_err(LD_REND, "count: %u", count);
 
-      // logging
-
-      print_solution(&solution[0]);
-
-      memset(hex_nonce, 0, HS_POW_NONCE_LEN * 2 + 1);
-      base16_encode(hex_nonce, HS_POW_NONCE_LEN * 2 + 1, &nonce,
-                    HS_POW_NONCE_LEN);
-      log_err(LD_REND, "N: %s", hex_nonce);
-
+      /* Temporary logging. */
+      log_err(LD_REND, "Success after %u attempts. INT_32(R)*E = %lu <= %u.",
+              count, (uint64_t)hash_result_netorder * effort, UINT32_MAX);
       char hex_challenge[2 * challenge_len + 1];
       memset(hex_challenge, 0, 2 * challenge_len + 1);
       base16_encode(hex_challenge, 2 * challenge_len + 1, challenge,
                     challenge_len);
       log_err(LD_REND, "C || N || INT_32(E): %s", hex_challenge);
-      log_err(LD_REND, "PARSED ES: %s", hex_str(&solution[0], 16));
+      log_err(LD_REND, "S: %s", hex_str(&solution[0], 16));
 
-      log_err(LD_REND, "hs_pow.c: storing nonce");
+      /* Store the information required in a solution */
       pow_solution_out->nonce = nonce;
-      log_err(LD_REND, "hs_pow.c: storing effort");
       pow_solution_out->effort = effort;
-      log_err(LD_REND, "hs_pow.c: storing seed head");
-      // HRPR TODO store this as array with SEED_HEAD len?
       pow_solution_out->seed_head = get_uint32(pow_params->seed);
-      log_err(LD_REND, "hs_pow.c: storing eqx solution");
       pow_solution_out->equix_solution = solution[0];
 
-      log_err(LD_REND, "freeing eqx context");
       equix_free(ctx);
       ret = 0;
     } else {
-      // log_err(LD_REND, "Failed: R*E > UINT32_MAX %u", count);
+      /* Did not pass the R * E <= UINT32_MAX check. Increment the nonce and try
+      again. */
       nonce++;
       count++;
       memcpy(challenge + sizeof(pow_params->seed), &nonce, HS_POW_NONCE_LEN);
@@ -194,28 +149,11 @@ solve_pow(hs_desc_pow_params_t *pow_params,
   }
 
   return ret;
-
-  // if ((uint64_t) hash_result_netorder * effort > UINT32_MAX) {
-  //   log_err(LD_REND, "R*E > UINT32_MAX");
-  // } else {
-  //   log_err(LD_REND, "R*E <= UINT32_MAX");
-  // }
-  // if ((uint64_t) hash_result_netorder * effort * 2 > UINT32_MAX) {
-  //   log_err(LD_REND, "R*E*2 > UINT32_MAX: %u", hash_result_netorder * effort
-  //   * 2);
-  // } else {
-  //   log_err(LD_REND, "R*E*2 <= UINT32_MAX: %u", hash_result_netorder *
-  //   effort * 2);
-  // }
-  // if ((uint64_t) UINT32_MAX + 1 > UINT32_MAX) {
-  //   log_err(LD_REND, "UINT32_MAX + 1 > UINT32_MAX");
-  // } else {
-  //   log_err(LD_REND, "UINT32_MAX + 1 <= UINT32_MAX");
-  // }
-
-  // Submit C, N, E, S (68 bytes total)
 }
 
+/** Verify the solution in pow_solution using the service's current PoW
+ * parameters found in pow_state. Returns 0 on success and -1 otherwise. Called
+ * by the service. */
 int
 verify_pow(hs_service_pow_state_t *pow_state, hs_pow_solution_t *pow_solution)
 {
@@ -229,7 +167,7 @@ verify_pow(hs_service_pow_state_t *pow_state, hs_pow_solution_t *pow_solution)
     goto done;
   }
 
-  /* Find a valid seed C that starts with POW_SEED. Fail if no such seed
+  /* Find a valid seed C that starts with the seed head. Fail if no such seed
    * exists. */
   if (get_uint32(pow_state->seed_current) == pow_solution->seed_head) {
     log_err(LD_REND, "Seed head matched current seed.");
@@ -259,6 +197,7 @@ verify_pow(hs_service_pow_state_t *pow_state, hs_pow_solution_t *pow_solution)
   offset += sizeof(uint32_t);
   tor_assert(challenge_len == offset);
 
+  /* Fail if R * E > UINT32_MAX. */
   uint8_t hash_result[HS_POW_HASH_LEN];
   blake2b_state S[1];
 
