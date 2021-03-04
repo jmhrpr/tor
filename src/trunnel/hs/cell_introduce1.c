@@ -16,38 +16,378 @@
 /* If we're running a static analysis tool, we don't want it to complain
  * that some of our remaining-bytes checks are dead-code. */
 int cellintroduce_deadcode_dummy__ = 0;
-#define OR_DEADCODE_DUMMY || cellintroduce_deadcode_dummy__
+#  define OR_DEADCODE_DUMMY || cellintroduce_deadcode_dummy__
 #else
-#define OR_DEADCODE_DUMMY
+#  define OR_DEADCODE_DUMMY
 #endif
 
-#define CHECK_REMAINING(nbytes, label)                           \
-  do {                                                           \
-    if (remaining < (nbytes) OR_DEADCODE_DUMMY) {                \
-      goto label;                                                \
-    }                                                            \
+#define CHECK_REMAINING(nbytes, label)           \
+  do {                                           \
+    if (remaining < (nbytes)OR_DEADCODE_DUMMY) { \
+      goto label;                                \
+    }                                            \
   } while (0)
 
 typedef struct trn_cell_extension_st trn_cell_extension_t;
 trn_cell_extension_t *trn_cell_extension_new(void);
 void trn_cell_extension_free(trn_cell_extension_t *victim);
-ssize_t trn_cell_extension_parse(trn_cell_extension_t **output, const uint8_t *input, const size_t len_in);
+ssize_t trn_cell_extension_parse(trn_cell_extension_t **output,
+                                 const uint8_t *input, const size_t len_in);
 ssize_t trn_cell_extension_encoded_len(const trn_cell_extension_t *obj);
-ssize_t trn_cell_extension_encode(uint8_t *output, size_t avail, const trn_cell_extension_t *input);
+ssize_t trn_cell_extension_encode(uint8_t *output, size_t avail,
+                                  const trn_cell_extension_t *input);
 const char *trn_cell_extension_check(const trn_cell_extension_t *obj);
 int trn_cell_extension_clear_errors(trn_cell_extension_t *obj);
 typedef struct link_specifier_st link_specifier_t;
 link_specifier_t *link_specifier_new(void);
 void link_specifier_free(link_specifier_t *victim);
-ssize_t link_specifier_parse(link_specifier_t **output, const uint8_t *input, const size_t len_in);
+ssize_t link_specifier_parse(link_specifier_t **output, const uint8_t *input,
+                             const size_t len_in);
 ssize_t link_specifier_encoded_len(const link_specifier_t *obj);
-ssize_t link_specifier_encode(uint8_t *output, size_t avail, const link_specifier_t *input);
+ssize_t link_specifier_encode(uint8_t *output, size_t avail,
+                              const link_specifier_t *input);
 const char *link_specifier_check(const link_specifier_t *obj);
 int link_specifier_clear_errors(link_specifier_t *obj);
+trn_cell_extension_pow_t *
+trn_cell_extension_pow_new(void)
+{
+  trn_cell_extension_pow_t *val =
+      trunnel_calloc(1, sizeof(trn_cell_extension_pow_t));
+  if (NULL == val)
+    return NULL;
+  return val;
+}
+
+/** Release all storage held inside 'obj', but do not free 'obj'.
+ */
+static void
+trn_cell_extension_pow_clear(trn_cell_extension_pow_t *obj)
+{
+  (void)obj;
+}
+
+void
+trn_cell_extension_pow_free(trn_cell_extension_pow_t *obj)
+{
+  if (obj == NULL)
+    return;
+  trn_cell_extension_pow_clear(obj);
+  trunnel_memwipe(obj, sizeof(trn_cell_extension_pow_t));
+  trunnel_free_(obj);
+}
+
+uint8_t
+trn_cell_extension_pow_get_pow_version(const trn_cell_extension_pow_t *inp)
+{
+  return inp->pow_version;
+}
+int
+trn_cell_extension_pow_set_pow_version(trn_cell_extension_pow_t *inp,
+                                       uint8_t val)
+{
+  inp->pow_version = val;
+  return 0;
+}
+size_t
+trn_cell_extension_pow_getlen_pow_nonce(const trn_cell_extension_pow_t *inp)
+{
+  (void)inp;
+  return TRUNNEL_POW_NONCE_LEN;
+}
+
+uint8_t
+trn_cell_extension_pow_get_pow_nonce(trn_cell_extension_pow_t *inp, size_t idx)
+{
+  trunnel_assert(idx < TRUNNEL_POW_NONCE_LEN);
+  return inp->pow_nonce[idx];
+}
+
+uint8_t
+trn_cell_extension_pow_getconst_pow_nonce(const trn_cell_extension_pow_t *inp,
+                                          size_t idx)
+{
+  return trn_cell_extension_pow_get_pow_nonce((trn_cell_extension_pow_t *)inp,
+                                              idx);
+}
+int
+trn_cell_extension_pow_set_pow_nonce(trn_cell_extension_pow_t *inp, size_t idx,
+                                     uint8_t elt)
+{
+  trunnel_assert(idx < TRUNNEL_POW_NONCE_LEN);
+  inp->pow_nonce[idx] = elt;
+  return 0;
+}
+
+uint8_t *
+trn_cell_extension_pow_getarray_pow_nonce(trn_cell_extension_pow_t *inp)
+{
+  return inp->pow_nonce;
+}
+const uint8_t *
+trn_cell_extension_pow_getconstarray_pow_nonce(
+    const trn_cell_extension_pow_t *inp)
+{
+  return (const uint8_t *)trn_cell_extension_pow_getarray_pow_nonce(
+      (trn_cell_extension_pow_t *)inp);
+}
+uint32_t
+trn_cell_extension_pow_get_pow_effort(const trn_cell_extension_pow_t *inp)
+{
+  return inp->pow_effort;
+}
+int
+trn_cell_extension_pow_set_pow_effort(trn_cell_extension_pow_t *inp,
+                                      uint32_t val)
+{
+  inp->pow_effort = val;
+  return 0;
+}
+uint32_t
+trn_cell_extension_pow_get_pow_seed(const trn_cell_extension_pow_t *inp)
+{
+  return inp->pow_seed;
+}
+int
+trn_cell_extension_pow_set_pow_seed(trn_cell_extension_pow_t *inp,
+                                    uint32_t val)
+{
+  inp->pow_seed = val;
+  return 0;
+}
+size_t
+trn_cell_extension_pow_getlen_pow_solution(const trn_cell_extension_pow_t *inp)
+{
+  (void)inp;
+  return TRUNNEL_POW_SOLUTION_LEN;
+}
+
+uint8_t
+trn_cell_extension_pow_get_pow_solution(trn_cell_extension_pow_t *inp,
+                                        size_t idx)
+{
+  trunnel_assert(idx < TRUNNEL_POW_SOLUTION_LEN);
+  return inp->pow_solution[idx];
+}
+
+uint8_t
+trn_cell_extension_pow_getconst_pow_solution(
+    const trn_cell_extension_pow_t *inp, size_t idx)
+{
+  return trn_cell_extension_pow_get_pow_solution(
+      (trn_cell_extension_pow_t *)inp, idx);
+}
+int
+trn_cell_extension_pow_set_pow_solution(trn_cell_extension_pow_t *inp,
+                                        size_t idx, uint8_t elt)
+{
+  trunnel_assert(idx < TRUNNEL_POW_SOLUTION_LEN);
+  inp->pow_solution[idx] = elt;
+  return 0;
+}
+
+uint8_t *
+trn_cell_extension_pow_getarray_pow_solution(trn_cell_extension_pow_t *inp)
+{
+  return inp->pow_solution;
+}
+const uint8_t *
+trn_cell_extension_pow_getconstarray_pow_solution(
+    const trn_cell_extension_pow_t *inp)
+{
+  return (const uint8_t *)trn_cell_extension_pow_getarray_pow_solution(
+      (trn_cell_extension_pow_t *)inp);
+}
+const char *
+trn_cell_extension_pow_check(const trn_cell_extension_pow_t *obj)
+{
+  if (obj == NULL)
+    return "Object was NULL";
+  if (obj->trunnel_error_code_)
+    return "A set function failed on this object";
+  return NULL;
+}
+
+ssize_t
+trn_cell_extension_pow_encoded_len(const trn_cell_extension_pow_t *obj)
+{
+  ssize_t result = 0;
+
+  if (NULL != trn_cell_extension_pow_check(obj))
+    return -1;
+
+  /* Length of u8 pow_version */
+  result += 1;
+
+  /* Length of u8 pow_nonce[TRUNNEL_POW_NONCE_LEN] */
+  result += TRUNNEL_POW_NONCE_LEN;
+
+  /* Length of u32 pow_effort */
+  result += 4;
+
+  /* Length of u32 pow_seed */
+  result += 4;
+
+  /* Length of u8 pow_solution[TRUNNEL_POW_SOLUTION_LEN] */
+  result += TRUNNEL_POW_SOLUTION_LEN;
+  return result;
+}
+int
+trn_cell_extension_pow_clear_errors(trn_cell_extension_pow_t *obj)
+{
+  int r = obj->trunnel_error_code_;
+  obj->trunnel_error_code_ = 0;
+  return r;
+}
+ssize_t
+trn_cell_extension_pow_encode(uint8_t *output, const size_t avail,
+                              const trn_cell_extension_pow_t *obj)
+{
+  ssize_t result = 0;
+  size_t written = 0;
+  uint8_t *ptr = output;
+  const char *msg;
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  const ssize_t encoded_len = trn_cell_extension_pow_encoded_len(obj);
+#endif
+
+  if (NULL != (msg = trn_cell_extension_pow_check(obj)))
+    goto check_failed;
+
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  trunnel_assert(encoded_len >= 0);
+#endif
+
+  /* Encode u8 pow_version */
+  trunnel_assert(written <= avail);
+  if (avail - written < 1)
+    goto truncated;
+  trunnel_set_uint8(ptr, (obj->pow_version));
+  written += 1;
+  ptr += 1;
+
+  /* Encode u8 pow_nonce[TRUNNEL_POW_NONCE_LEN] */
+  trunnel_assert(written <= avail);
+  if (avail - written < TRUNNEL_POW_NONCE_LEN)
+    goto truncated;
+  memcpy(ptr, obj->pow_nonce, TRUNNEL_POW_NONCE_LEN);
+  written += TRUNNEL_POW_NONCE_LEN;
+  ptr += TRUNNEL_POW_NONCE_LEN;
+
+  /* Encode u32 pow_effort */
+  trunnel_assert(written <= avail);
+  if (avail - written < 4)
+    goto truncated;
+  trunnel_set_uint32(ptr, trunnel_htonl(obj->pow_effort));
+  written += 4;
+  ptr += 4;
+
+  /* Encode u32 pow_seed */
+  trunnel_assert(written <= avail);
+  if (avail - written < 4)
+    goto truncated;
+  trunnel_set_uint32(ptr, trunnel_htonl(obj->pow_seed));
+  written += 4;
+  ptr += 4;
+
+  /* Encode u8 pow_solution[TRUNNEL_POW_SOLUTION_LEN] */
+  trunnel_assert(written <= avail);
+  if (avail - written < TRUNNEL_POW_SOLUTION_LEN)
+    goto truncated;
+  memcpy(ptr, obj->pow_solution, TRUNNEL_POW_SOLUTION_LEN);
+  written += TRUNNEL_POW_SOLUTION_LEN;
+  ptr += TRUNNEL_POW_SOLUTION_LEN;
+
+  trunnel_assert(ptr == output + written);
+#ifdef TRUNNEL_CHECK_ENCODED_LEN
+  {
+    trunnel_assert(encoded_len >= 0);
+    trunnel_assert((size_t)encoded_len == written);
+  }
+
+#endif
+
+  return written;
+
+truncated:
+  result = -2;
+  goto fail;
+check_failed:
+  (void)msg;
+  result = -1;
+  goto fail;
+fail:
+  trunnel_assert(result < 0);
+  return result;
+}
+
+/** As trn_cell_extension_pow_parse(), but do not allocate the output
+ * object.
+ */
+static ssize_t
+trn_cell_extension_pow_parse_into(trn_cell_extension_pow_t *obj,
+                                  const uint8_t *input, const size_t len_in)
+{
+  const uint8_t *ptr = input;
+  size_t remaining = len_in;
+  ssize_t result = 0;
+  (void)result;
+
+  /* Parse u8 pow_version */
+  CHECK_REMAINING(1, truncated);
+  obj->pow_version = (trunnel_get_uint8(ptr));
+  remaining -= 1;
+  ptr += 1;
+
+  /* Parse u8 pow_nonce[TRUNNEL_POW_NONCE_LEN] */
+  CHECK_REMAINING(TRUNNEL_POW_NONCE_LEN, truncated);
+  memcpy(obj->pow_nonce, ptr, TRUNNEL_POW_NONCE_LEN);
+  remaining -= TRUNNEL_POW_NONCE_LEN;
+  ptr += TRUNNEL_POW_NONCE_LEN;
+
+  /* Parse u32 pow_effort */
+  CHECK_REMAINING(4, truncated);
+  obj->pow_effort = trunnel_ntohl(trunnel_get_uint32(ptr));
+  remaining -= 4;
+  ptr += 4;
+
+  /* Parse u32 pow_seed */
+  CHECK_REMAINING(4, truncated);
+  obj->pow_seed = trunnel_ntohl(trunnel_get_uint32(ptr));
+  remaining -= 4;
+  ptr += 4;
+
+  /* Parse u8 pow_solution[TRUNNEL_POW_SOLUTION_LEN] */
+  CHECK_REMAINING(TRUNNEL_POW_SOLUTION_LEN, truncated);
+  memcpy(obj->pow_solution, ptr, TRUNNEL_POW_SOLUTION_LEN);
+  remaining -= TRUNNEL_POW_SOLUTION_LEN;
+  ptr += TRUNNEL_POW_SOLUTION_LEN;
+  trunnel_assert(ptr + remaining == input + len_in);
+  return len_in - remaining;
+
+truncated:
+  return -2;
+}
+
+ssize_t
+trn_cell_extension_pow_parse(trn_cell_extension_pow_t **output,
+                             const uint8_t *input, const size_t len_in)
+{
+  ssize_t result;
+  *output = trn_cell_extension_pow_new();
+  if (NULL == *output)
+    return -1;
+  result = trn_cell_extension_pow_parse_into(*output, input, len_in);
+  if (result < 0) {
+    trn_cell_extension_pow_free(*output);
+    *output = NULL;
+  }
+  return result;
+}
 trn_cell_introduce1_t *
 trn_cell_introduce1_new(void)
 {
-  trn_cell_introduce1_t *val = trunnel_calloc(1, sizeof(trn_cell_introduce1_t));
+  trn_cell_introduce1_t *val =
+      trunnel_calloc(1, sizeof(trn_cell_introduce1_t));
   if (NULL == val)
     return NULL;
   val->auth_key_type = TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519;
@@ -59,7 +399,7 @@ trn_cell_introduce1_new(void)
 static void
 trn_cell_introduce1_clear(trn_cell_introduce1_t *obj)
 {
-  (void) obj;
+  (void)obj;
   TRUNNEL_DYNARRAY_WIPE(&obj->auth_key);
   TRUNNEL_DYNARRAY_CLEAR(&obj->auth_key);
   trn_cell_extension_free(obj->extensions);
@@ -81,7 +421,8 @@ trn_cell_introduce1_free(trn_cell_introduce1_t *obj)
 size_t
 trn_cell_introduce1_getlen_legacy_key_id(const trn_cell_introduce1_t *inp)
 {
-  (void)inp;  return TRUNNEL_SHA1_LEN;
+  (void)inp;
+  return TRUNNEL_SHA1_LEN;
 }
 
 uint8_t
@@ -92,12 +433,15 @@ trn_cell_introduce1_get_legacy_key_id(trn_cell_introduce1_t *inp, size_t idx)
 }
 
 uint8_t
-trn_cell_introduce1_getconst_legacy_key_id(const trn_cell_introduce1_t *inp, size_t idx)
+trn_cell_introduce1_getconst_legacy_key_id(const trn_cell_introduce1_t *inp,
+                                           size_t idx)
 {
-  return trn_cell_introduce1_get_legacy_key_id((trn_cell_introduce1_t*)inp, idx);
+  return trn_cell_introduce1_get_legacy_key_id((trn_cell_introduce1_t *)inp,
+                                               idx);
 }
 int
-trn_cell_introduce1_set_legacy_key_id(trn_cell_introduce1_t *inp, size_t idx, uint8_t elt)
+trn_cell_introduce1_set_legacy_key_id(trn_cell_introduce1_t *inp, size_t idx,
+                                      uint8_t elt)
 {
   trunnel_assert(idx < TRUNNEL_SHA1_LEN);
   inp->legacy_key_id[idx] = elt;
@@ -109,10 +453,12 @@ trn_cell_introduce1_getarray_legacy_key_id(trn_cell_introduce1_t *inp)
 {
   return inp->legacy_key_id;
 }
-const uint8_t  *
-trn_cell_introduce1_getconstarray_legacy_key_id(const trn_cell_introduce1_t *inp)
+const uint8_t *
+trn_cell_introduce1_getconstarray_legacy_key_id(
+    const trn_cell_introduce1_t *inp)
 {
-  return (const uint8_t  *)trn_cell_introduce1_getarray_legacy_key_id((trn_cell_introduce1_t*)inp);
+  return (const uint8_t *)trn_cell_introduce1_getarray_legacy_key_id(
+      (trn_cell_introduce1_t *)inp);
 }
 uint8_t
 trn_cell_introduce1_get_auth_key_type(const trn_cell_introduce1_t *inp)
@@ -122,9 +468,11 @@ trn_cell_introduce1_get_auth_key_type(const trn_cell_introduce1_t *inp)
 int
 trn_cell_introduce1_set_auth_key_type(trn_cell_introduce1_t *inp, uint8_t val)
 {
-  if (! ((val == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519 || val == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0 || val == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1))) {
-     TRUNNEL_SET_ERROR_CODE(inp);
-     return -1;
+  if (!((val == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519 ||
+         val == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0 ||
+         val == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1))) {
+    TRUNNEL_SET_ERROR_CODE(inp);
+    return -1;
   }
   inp->auth_key_type = val;
   return 0;
@@ -153,12 +501,14 @@ trn_cell_introduce1_get_auth_key(trn_cell_introduce1_t *inp, size_t idx)
 }
 
 uint8_t
-trn_cell_introduce1_getconst_auth_key(const trn_cell_introduce1_t *inp, size_t idx)
+trn_cell_introduce1_getconst_auth_key(const trn_cell_introduce1_t *inp,
+                                      size_t idx)
 {
-  return trn_cell_introduce1_get_auth_key((trn_cell_introduce1_t*)inp, idx);
+  return trn_cell_introduce1_get_auth_key((trn_cell_introduce1_t *)inp, idx);
 }
 int
-trn_cell_introduce1_set_auth_key(trn_cell_introduce1_t *inp, size_t idx, uint8_t elt)
+trn_cell_introduce1_set_auth_key(trn_cell_introduce1_t *inp, size_t idx,
+                                 uint8_t elt)
 {
   TRUNNEL_DYNARRAY_SET(&inp->auth_key, idx, elt);
   return 0;
@@ -172,7 +522,7 @@ trn_cell_introduce1_add_auth_key(trn_cell_introduce1_t *inp, uint8_t elt)
 #endif
   TRUNNEL_DYNARRAY_ADD(uint8_t, &inp->auth_key, elt, {});
   return 0;
- trunnel_alloc_failed:
+trunnel_alloc_failed:
   TRUNNEL_SET_ERROR_CODE(inp);
   return -1;
 }
@@ -182,10 +532,11 @@ trn_cell_introduce1_getarray_auth_key(trn_cell_introduce1_t *inp)
 {
   return inp->auth_key.elts_;
 }
-const uint8_t  *
+const uint8_t *
 trn_cell_introduce1_getconstarray_auth_key(const trn_cell_introduce1_t *inp)
 {
-  return (const uint8_t  *)trn_cell_introduce1_getarray_auth_key((trn_cell_introduce1_t*)inp);
+  return (const uint8_t *)trn_cell_introduce1_getarray_auth_key(
+      (trn_cell_introduce1_t *)inp);
 }
 int
 trn_cell_introduce1_setlen_auth_key(trn_cell_introduce1_t *inp, size_t newlen)
@@ -195,15 +546,15 @@ trn_cell_introduce1_setlen_auth_key(trn_cell_introduce1_t *inp, size_t newlen)
   if (newlen > UINT16_MAX)
     goto trunnel_alloc_failed;
 #endif
-  newptr = trunnel_dynarray_setlen(&inp->auth_key.allocated_,
-                 &inp->auth_key.n_, inp->auth_key.elts_, newlen,
-                 sizeof(inp->auth_key.elts_[0]), (trunnel_free_fn_t) NULL,
-                 &inp->trunnel_error_code_);
+  newptr = trunnel_dynarray_setlen(
+      &inp->auth_key.allocated_, &inp->auth_key.n_, inp->auth_key.elts_,
+      newlen, sizeof(inp->auth_key.elts_[0]), (trunnel_free_fn_t)NULL,
+      &inp->trunnel_error_code_);
   if (newlen != 0 && newptr == NULL)
     goto trunnel_alloc_failed;
   inp->auth_key.elts_ = newptr;
   return 0;
- trunnel_alloc_failed:
+trunnel_alloc_failed:
   TRUNNEL_SET_ERROR_CODE(inp);
   return -1;
 }
@@ -215,17 +566,19 @@ trn_cell_introduce1_get_extensions(trn_cell_introduce1_t *inp)
 const struct trn_cell_extension_st *
 trn_cell_introduce1_getconst_extensions(const trn_cell_introduce1_t *inp)
 {
-  return trn_cell_introduce1_get_extensions((trn_cell_introduce1_t*) inp);
+  return trn_cell_introduce1_get_extensions((trn_cell_introduce1_t *)inp);
 }
 int
-trn_cell_introduce1_set_extensions(trn_cell_introduce1_t *inp, struct trn_cell_extension_st *val)
+trn_cell_introduce1_set_extensions(trn_cell_introduce1_t *inp,
+                                   struct trn_cell_extension_st *val)
 {
   if (inp->extensions && inp->extensions != val)
     trn_cell_extension_free(inp->extensions);
   return trn_cell_introduce1_set0_extensions(inp, val);
 }
 int
-trn_cell_introduce1_set0_extensions(trn_cell_introduce1_t *inp, struct trn_cell_extension_st *val)
+trn_cell_introduce1_set0_extensions(trn_cell_introduce1_t *inp,
+                                    struct trn_cell_extension_st *val)
 {
   inp->extensions = val;
   return 0;
@@ -243,12 +596,14 @@ trn_cell_introduce1_get_encrypted(trn_cell_introduce1_t *inp, size_t idx)
 }
 
 uint8_t
-trn_cell_introduce1_getconst_encrypted(const trn_cell_introduce1_t *inp, size_t idx)
+trn_cell_introduce1_getconst_encrypted(const trn_cell_introduce1_t *inp,
+                                       size_t idx)
 {
-  return trn_cell_introduce1_get_encrypted((trn_cell_introduce1_t*)inp, idx);
+  return trn_cell_introduce1_get_encrypted((trn_cell_introduce1_t *)inp, idx);
 }
 int
-trn_cell_introduce1_set_encrypted(trn_cell_introduce1_t *inp, size_t idx, uint8_t elt)
+trn_cell_introduce1_set_encrypted(trn_cell_introduce1_t *inp, size_t idx,
+                                  uint8_t elt)
 {
   TRUNNEL_DYNARRAY_SET(&inp->encrypted, idx, elt);
   return 0;
@@ -258,7 +613,7 @@ trn_cell_introduce1_add_encrypted(trn_cell_introduce1_t *inp, uint8_t elt)
 {
   TRUNNEL_DYNARRAY_ADD(uint8_t, &inp->encrypted, elt, {});
   return 0;
- trunnel_alloc_failed:
+trunnel_alloc_failed:
   TRUNNEL_SET_ERROR_CODE(inp);
   return -1;
 }
@@ -268,24 +623,25 @@ trn_cell_introduce1_getarray_encrypted(trn_cell_introduce1_t *inp)
 {
   return inp->encrypted.elts_;
 }
-const uint8_t  *
+const uint8_t *
 trn_cell_introduce1_getconstarray_encrypted(const trn_cell_introduce1_t *inp)
 {
-  return (const uint8_t  *)trn_cell_introduce1_getarray_encrypted((trn_cell_introduce1_t*)inp);
+  return (const uint8_t *)trn_cell_introduce1_getarray_encrypted(
+      (trn_cell_introduce1_t *)inp);
 }
 int
 trn_cell_introduce1_setlen_encrypted(trn_cell_introduce1_t *inp, size_t newlen)
 {
   uint8_t *newptr;
-  newptr = trunnel_dynarray_setlen(&inp->encrypted.allocated_,
-                 &inp->encrypted.n_, inp->encrypted.elts_, newlen,
-                 sizeof(inp->encrypted.elts_[0]), (trunnel_free_fn_t) NULL,
-                 &inp->trunnel_error_code_);
+  newptr = trunnel_dynarray_setlen(
+      &inp->encrypted.allocated_, &inp->encrypted.n_, inp->encrypted.elts_,
+      newlen, sizeof(inp->encrypted.elts_[0]), (trunnel_free_fn_t)NULL,
+      &inp->trunnel_error_code_);
   if (newlen != 0 && newptr == NULL)
     goto trunnel_alloc_failed;
   inp->encrypted.elts_ = newptr;
   return 0;
- trunnel_alloc_failed:
+trunnel_alloc_failed:
   TRUNNEL_SET_ERROR_CODE(inp);
   return -1;
 }
@@ -296,7 +652,9 @@ trn_cell_introduce1_check(const trn_cell_introduce1_t *obj)
     return "Object was NULL";
   if (obj->trunnel_error_code_)
     return "A set function failed on this object";
-  if (! (obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519 || obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0 || obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1))
+  if (!(obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519 ||
+        obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0 ||
+        obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1))
     return "Integer out of bounds";
   if (TRUNNEL_DYNARRAY_LEN(&obj->auth_key) != obj->auth_key_len)
     return "Length mismatch for auth_key";
@@ -314,13 +672,14 @@ trn_cell_introduce1_encoded_len(const trn_cell_introduce1_t *obj)
   ssize_t result = 0;
 
   if (NULL != trn_cell_introduce1_check(obj))
-     return -1;
-
+    return -1;
 
   /* Length of u8 legacy_key_id[TRUNNEL_SHA1_LEN] */
   result += TRUNNEL_SHA1_LEN;
 
-  /* Length of u8 auth_key_type IN [TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519, TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0, TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1] */
+  /* Length of u8 auth_key_type IN [TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519,
+   * TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0,
+   * TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1] */
   result += 1;
 
   /* Length of u16 auth_key_len */
@@ -344,7 +703,8 @@ trn_cell_introduce1_clear_errors(trn_cell_introduce1_t *obj)
   return r;
 }
 ssize_t
-trn_cell_introduce1_encode(uint8_t *output, const size_t avail, const trn_cell_introduce1_t *obj)
+trn_cell_introduce1_encode(uint8_t *output, const size_t avail,
+                           const trn_cell_introduce1_t *obj)
 {
   ssize_t result = 0;
   size_t written = 0;
@@ -366,21 +726,26 @@ trn_cell_introduce1_encode(uint8_t *output, const size_t avail, const trn_cell_i
   if (avail - written < TRUNNEL_SHA1_LEN)
     goto truncated;
   memcpy(ptr, obj->legacy_key_id, TRUNNEL_SHA1_LEN);
-  written += TRUNNEL_SHA1_LEN; ptr += TRUNNEL_SHA1_LEN;
+  written += TRUNNEL_SHA1_LEN;
+  ptr += TRUNNEL_SHA1_LEN;
 
-  /* Encode u8 auth_key_type IN [TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519, TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0, TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1] */
+  /* Encode u8 auth_key_type IN [TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519,
+   * TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0,
+   * TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1] */
   trunnel_assert(written <= avail);
   if (avail - written < 1)
     goto truncated;
   trunnel_set_uint8(ptr, (obj->auth_key_type));
-  written += 1; ptr += 1;
+  written += 1;
+  ptr += 1;
 
   /* Encode u16 auth_key_len */
   trunnel_assert(written <= avail);
   if (avail - written < 2)
     goto truncated;
   trunnel_set_uint16(ptr, trunnel_htons(obj->auth_key_len));
-  written += 2; ptr += 2;
+  written += 2;
+  ptr += 2;
 
   /* Encode u8 auth_key[auth_key_len] */
   {
@@ -391,7 +756,8 @@ trn_cell_introduce1_encode(uint8_t *output, const size_t avail, const trn_cell_i
       goto truncated;
     if (elt_len)
       memcpy(ptr, obj->auth_key.elts_, elt_len);
-    written += elt_len; ptr += elt_len;
+    written += elt_len;
+    ptr += elt_len;
   }
 
   /* Encode struct trn_cell_extension extensions */
@@ -399,7 +765,8 @@ trn_cell_introduce1_encode(uint8_t *output, const size_t avail, const trn_cell_i
   result = trn_cell_extension_encode(ptr, avail - written, obj->extensions);
   if (result < 0)
     goto fail; /* XXXXXXX !*/
-  written += result; ptr += result;
+  written += result;
+  ptr += result;
 
   /* Encode u8 encrypted[] */
   {
@@ -409,9 +776,9 @@ trn_cell_introduce1_encode(uint8_t *output, const size_t avail, const trn_cell_i
       goto truncated;
     if (elt_len)
       memcpy(ptr, obj->encrypted.elts_, elt_len);
-    written += elt_len; ptr += elt_len;
+    written += elt_len;
+    ptr += elt_len;
   }
-
 
   trunnel_assert(ptr == output + written);
 #ifdef TRUNNEL_CHECK_ENCODED_LEN
@@ -424,14 +791,14 @@ trn_cell_introduce1_encode(uint8_t *output, const size_t avail, const trn_cell_i
 
   return written;
 
- truncated:
+truncated:
   result = -2;
   goto fail;
- check_failed:
+check_failed:
   (void)msg;
   result = -1;
   goto fail;
- fail:
+fail:
   trunnel_assert(result < 0);
   return result;
 }
@@ -440,7 +807,8 @@ trn_cell_introduce1_encode(uint8_t *output, const size_t avail, const trn_cell_i
  * object.
  */
 static ssize_t
-trn_cell_introduce1_parse_into(trn_cell_introduce1_t *obj, const uint8_t *input, const size_t len_in)
+trn_cell_introduce1_parse_into(trn_cell_introduce1_t *obj,
+                               const uint8_t *input, const size_t len_in)
 {
   const uint8_t *ptr = input;
   size_t remaining = len_in;
@@ -450,19 +818,26 @@ trn_cell_introduce1_parse_into(trn_cell_introduce1_t *obj, const uint8_t *input,
   /* Parse u8 legacy_key_id[TRUNNEL_SHA1_LEN] */
   CHECK_REMAINING(TRUNNEL_SHA1_LEN, truncated);
   memcpy(obj->legacy_key_id, ptr, TRUNNEL_SHA1_LEN);
-  remaining -= TRUNNEL_SHA1_LEN; ptr += TRUNNEL_SHA1_LEN;
+  remaining -= TRUNNEL_SHA1_LEN;
+  ptr += TRUNNEL_SHA1_LEN;
 
-  /* Parse u8 auth_key_type IN [TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519, TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0, TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1] */
+  /* Parse u8 auth_key_type IN [TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519,
+   * TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0,
+   * TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1] */
   CHECK_REMAINING(1, truncated);
   obj->auth_key_type = (trunnel_get_uint8(ptr));
-  remaining -= 1; ptr += 1;
-  if (! (obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519 || obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0 || obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1))
+  remaining -= 1;
+  ptr += 1;
+  if (!(obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_ED25519 ||
+        obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY0 ||
+        obj->auth_key_type == TRUNNEL_HS_INTRO_AUTH_KEY_TYPE_LEGACY1))
     goto fail;
 
   /* Parse u16 auth_key_len */
   CHECK_REMAINING(2, truncated);
   obj->auth_key_len = trunnel_ntohs(trunnel_get_uint16(ptr));
-  remaining -= 2; ptr += 2;
+  remaining -= 2;
+  ptr += 2;
 
   /* Parse u8 auth_key[auth_key_len] */
   CHECK_REMAINING(obj->auth_key_len, truncated);
@@ -470,38 +845,42 @@ trn_cell_introduce1_parse_into(trn_cell_introduce1_t *obj, const uint8_t *input,
   obj->auth_key.n_ = obj->auth_key_len;
   if (obj->auth_key_len)
     memcpy(obj->auth_key.elts_, ptr, obj->auth_key_len);
-  ptr += obj->auth_key_len; remaining -= obj->auth_key_len;
+  ptr += obj->auth_key_len;
+  remaining -= obj->auth_key_len;
 
   /* Parse struct trn_cell_extension extensions */
   result = trn_cell_extension_parse(&obj->extensions, ptr, remaining);
   if (result < 0)
     goto relay_fail;
   trunnel_assert((size_t)result <= remaining);
-  remaining -= result; ptr += result;
+  remaining -= result;
+  ptr += result;
 
   /* Parse u8 encrypted[] */
   TRUNNEL_DYNARRAY_EXPAND(uint8_t, &obj->encrypted, remaining, {});
   obj->encrypted.n_ = remaining;
   if (remaining)
     memcpy(obj->encrypted.elts_, ptr, remaining);
-  ptr += remaining; remaining -= remaining;
+  ptr += remaining;
+  remaining -= remaining;
   trunnel_assert(ptr + remaining == input + len_in);
   return len_in - remaining;
 
- truncated:
+truncated:
   return -2;
- relay_fail:
+relay_fail:
   trunnel_assert(result < 0);
   return result;
- trunnel_alloc_failed:
+trunnel_alloc_failed:
   return -1;
- fail:
+fail:
   result = -1;
   return result;
 }
 
 ssize_t
-trn_cell_introduce1_parse(trn_cell_introduce1_t **output, const uint8_t *input, const size_t len_in)
+trn_cell_introduce1_parse(trn_cell_introduce1_t **output, const uint8_t *input,
+                          const size_t len_in)
 {
   ssize_t result;
   *output = trn_cell_introduce1_new();
@@ -517,7 +896,8 @@ trn_cell_introduce1_parse(trn_cell_introduce1_t **output, const uint8_t *input, 
 trn_cell_introduce_ack_t *
 trn_cell_introduce_ack_new(void)
 {
-  trn_cell_introduce_ack_t *val = trunnel_calloc(1, sizeof(trn_cell_introduce_ack_t));
+  trn_cell_introduce_ack_t *val =
+      trunnel_calloc(1, sizeof(trn_cell_introduce_ack_t));
   if (NULL == val)
     return NULL;
   return val;
@@ -528,7 +908,7 @@ trn_cell_introduce_ack_new(void)
 static void
 trn_cell_introduce_ack_clear(trn_cell_introduce_ack_t *obj)
 {
-  (void) obj;
+  (void)obj;
   trn_cell_extension_free(obj->extensions);
   obj->extensions = NULL;
 }
@@ -562,17 +942,20 @@ trn_cell_introduce_ack_get_extensions(trn_cell_introduce_ack_t *inp)
 const struct trn_cell_extension_st *
 trn_cell_introduce_ack_getconst_extensions(const trn_cell_introduce_ack_t *inp)
 {
-  return trn_cell_introduce_ack_get_extensions((trn_cell_introduce_ack_t*) inp);
+  return trn_cell_introduce_ack_get_extensions(
+      (trn_cell_introduce_ack_t *)inp);
 }
 int
-trn_cell_introduce_ack_set_extensions(trn_cell_introduce_ack_t *inp, struct trn_cell_extension_st *val)
+trn_cell_introduce_ack_set_extensions(trn_cell_introduce_ack_t *inp,
+                                      struct trn_cell_extension_st *val)
 {
   if (inp->extensions && inp->extensions != val)
     trn_cell_extension_free(inp->extensions);
   return trn_cell_introduce_ack_set0_extensions(inp, val);
 }
 int
-trn_cell_introduce_ack_set0_extensions(trn_cell_introduce_ack_t *inp, struct trn_cell_extension_st *val)
+trn_cell_introduce_ack_set0_extensions(trn_cell_introduce_ack_t *inp,
+                                       struct trn_cell_extension_st *val)
 {
   inp->extensions = val;
   return 0;
@@ -598,8 +981,7 @@ trn_cell_introduce_ack_encoded_len(const trn_cell_introduce_ack_t *obj)
   ssize_t result = 0;
 
   if (NULL != trn_cell_introduce_ack_check(obj))
-     return -1;
-
+    return -1;
 
   /* Length of u16 status */
   result += 2;
@@ -616,7 +998,8 @@ trn_cell_introduce_ack_clear_errors(trn_cell_introduce_ack_t *obj)
   return r;
 }
 ssize_t
-trn_cell_introduce_ack_encode(uint8_t *output, const size_t avail, const trn_cell_introduce_ack_t *obj)
+trn_cell_introduce_ack_encode(uint8_t *output, const size_t avail,
+                              const trn_cell_introduce_ack_t *obj)
 {
   ssize_t result = 0;
   size_t written = 0;
@@ -638,15 +1021,16 @@ trn_cell_introduce_ack_encode(uint8_t *output, const size_t avail, const trn_cel
   if (avail - written < 2)
     goto truncated;
   trunnel_set_uint16(ptr, trunnel_htons(obj->status));
-  written += 2; ptr += 2;
+  written += 2;
+  ptr += 2;
 
   /* Encode struct trn_cell_extension extensions */
   trunnel_assert(written <= avail);
   result = trn_cell_extension_encode(ptr, avail - written, obj->extensions);
   if (result < 0)
     goto fail; /* XXXXXXX !*/
-  written += result; ptr += result;
-
+  written += result;
+  ptr += result;
 
   trunnel_assert(ptr == output + written);
 #ifdef TRUNNEL_CHECK_ENCODED_LEN
@@ -659,14 +1043,14 @@ trn_cell_introduce_ack_encode(uint8_t *output, const size_t avail, const trn_cel
 
   return written;
 
- truncated:
+truncated:
   result = -2;
   goto fail;
- check_failed:
+check_failed:
   (void)msg;
   result = -1;
   goto fail;
- fail:
+fail:
   trunnel_assert(result < 0);
   return result;
 }
@@ -675,7 +1059,8 @@ trn_cell_introduce_ack_encode(uint8_t *output, const size_t avail, const trn_cel
  * object.
  */
 static ssize_t
-trn_cell_introduce_ack_parse_into(trn_cell_introduce_ack_t *obj, const uint8_t *input, const size_t len_in)
+trn_cell_introduce_ack_parse_into(trn_cell_introduce_ack_t *obj,
+                                  const uint8_t *input, const size_t len_in)
 {
   const uint8_t *ptr = input;
   size_t remaining = len_in;
@@ -685,26 +1070,29 @@ trn_cell_introduce_ack_parse_into(trn_cell_introduce_ack_t *obj, const uint8_t *
   /* Parse u16 status */
   CHECK_REMAINING(2, truncated);
   obj->status = trunnel_ntohs(trunnel_get_uint16(ptr));
-  remaining -= 2; ptr += 2;
+  remaining -= 2;
+  ptr += 2;
 
   /* Parse struct trn_cell_extension extensions */
   result = trn_cell_extension_parse(&obj->extensions, ptr, remaining);
   if (result < 0)
     goto relay_fail;
   trunnel_assert((size_t)result <= remaining);
-  remaining -= result; ptr += result;
+  remaining -= result;
+  ptr += result;
   trunnel_assert(ptr + remaining == input + len_in);
   return len_in - remaining;
 
- truncated:
+truncated:
   return -2;
- relay_fail:
+relay_fail:
   trunnel_assert(result < 0);
   return result;
 }
 
 ssize_t
-trn_cell_introduce_ack_parse(trn_cell_introduce_ack_t **output, const uint8_t *input, const size_t len_in)
+trn_cell_introduce_ack_parse(trn_cell_introduce_ack_t **output,
+                             const uint8_t *input, const size_t len_in)
 {
   ssize_t result;
   *output = trn_cell_introduce_ack_new();
@@ -720,7 +1108,8 @@ trn_cell_introduce_ack_parse(trn_cell_introduce_ack_t **output, const uint8_t *i
 trn_cell_introduce_encrypted_t *
 trn_cell_introduce_encrypted_new(void)
 {
-  trn_cell_introduce_encrypted_t *val = trunnel_calloc(1, sizeof(trn_cell_introduce_encrypted_t));
+  trn_cell_introduce_encrypted_t *val =
+      trunnel_calloc(1, sizeof(trn_cell_introduce_encrypted_t));
   if (NULL == val)
     return NULL;
   val->onion_key_type = TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR;
@@ -732,13 +1121,12 @@ trn_cell_introduce_encrypted_new(void)
 static void
 trn_cell_introduce_encrypted_clear(trn_cell_introduce_encrypted_t *obj)
 {
-  (void) obj;
+  (void)obj;
   trn_cell_extension_free(obj->extensions);
   obj->extensions = NULL;
   TRUNNEL_DYNARRAY_WIPE(&obj->onion_key);
   TRUNNEL_DYNARRAY_CLEAR(&obj->onion_key);
   {
-
     unsigned idx;
     for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->nspecs); ++idx) {
       link_specifier_free(TRUNNEL_DYNARRAY_GET(&obj->nspecs, idx));
@@ -761,25 +1149,31 @@ trn_cell_introduce_encrypted_free(trn_cell_introduce_encrypted_t *obj)
 }
 
 size_t
-trn_cell_introduce_encrypted_getlen_rend_cookie(const trn_cell_introduce_encrypted_t *inp)
+trn_cell_introduce_encrypted_getlen_rend_cookie(
+    const trn_cell_introduce_encrypted_t *inp)
 {
-  (void)inp;  return TRUNNEL_REND_COOKIE_LEN;
+  (void)inp;
+  return TRUNNEL_REND_COOKIE_LEN;
 }
 
 uint8_t
-trn_cell_introduce_encrypted_get_rend_cookie(trn_cell_introduce_encrypted_t *inp, size_t idx)
+trn_cell_introduce_encrypted_get_rend_cookie(
+    trn_cell_introduce_encrypted_t *inp, size_t idx)
 {
   trunnel_assert(idx < TRUNNEL_REND_COOKIE_LEN);
   return inp->rend_cookie[idx];
 }
 
 uint8_t
-trn_cell_introduce_encrypted_getconst_rend_cookie(const trn_cell_introduce_encrypted_t *inp, size_t idx)
+trn_cell_introduce_encrypted_getconst_rend_cookie(
+    const trn_cell_introduce_encrypted_t *inp, size_t idx)
 {
-  return trn_cell_introduce_encrypted_get_rend_cookie((trn_cell_introduce_encrypted_t*)inp, idx);
+  return trn_cell_introduce_encrypted_get_rend_cookie(
+      (trn_cell_introduce_encrypted_t *)inp, idx);
 }
 int
-trn_cell_introduce_encrypted_set_rend_cookie(trn_cell_introduce_encrypted_t *inp, size_t idx, uint8_t elt)
+trn_cell_introduce_encrypted_set_rend_cookie(
+    trn_cell_introduce_encrypted_t *inp, size_t idx, uint8_t elt)
 {
   trunnel_assert(idx < TRUNNEL_REND_COOKIE_LEN);
   inp->rend_cookie[idx] = elt;
@@ -787,89 +1181,107 @@ trn_cell_introduce_encrypted_set_rend_cookie(trn_cell_introduce_encrypted_t *inp
 }
 
 uint8_t *
-trn_cell_introduce_encrypted_getarray_rend_cookie(trn_cell_introduce_encrypted_t *inp)
+trn_cell_introduce_encrypted_getarray_rend_cookie(
+    trn_cell_introduce_encrypted_t *inp)
 {
   return inp->rend_cookie;
 }
-const uint8_t  *
-trn_cell_introduce_encrypted_getconstarray_rend_cookie(const trn_cell_introduce_encrypted_t *inp)
+const uint8_t *
+trn_cell_introduce_encrypted_getconstarray_rend_cookie(
+    const trn_cell_introduce_encrypted_t *inp)
 {
-  return (const uint8_t  *)trn_cell_introduce_encrypted_getarray_rend_cookie((trn_cell_introduce_encrypted_t*)inp);
+  return (const uint8_t *)trn_cell_introduce_encrypted_getarray_rend_cookie(
+      (trn_cell_introduce_encrypted_t *)inp);
 }
 struct trn_cell_extension_st *
-trn_cell_introduce_encrypted_get_extensions(trn_cell_introduce_encrypted_t *inp)
+trn_cell_introduce_encrypted_get_extensions(
+    trn_cell_introduce_encrypted_t *inp)
 {
   return inp->extensions;
 }
 const struct trn_cell_extension_st *
-trn_cell_introduce_encrypted_getconst_extensions(const trn_cell_introduce_encrypted_t *inp)
+trn_cell_introduce_encrypted_getconst_extensions(
+    const trn_cell_introduce_encrypted_t *inp)
 {
-  return trn_cell_introduce_encrypted_get_extensions((trn_cell_introduce_encrypted_t*) inp);
+  return trn_cell_introduce_encrypted_get_extensions(
+      (trn_cell_introduce_encrypted_t *)inp);
 }
 int
-trn_cell_introduce_encrypted_set_extensions(trn_cell_introduce_encrypted_t *inp, struct trn_cell_extension_st *val)
+trn_cell_introduce_encrypted_set_extensions(
+    trn_cell_introduce_encrypted_t *inp, struct trn_cell_extension_st *val)
 {
   if (inp->extensions && inp->extensions != val)
     trn_cell_extension_free(inp->extensions);
   return trn_cell_introduce_encrypted_set0_extensions(inp, val);
 }
 int
-trn_cell_introduce_encrypted_set0_extensions(trn_cell_introduce_encrypted_t *inp, struct trn_cell_extension_st *val)
+trn_cell_introduce_encrypted_set0_extensions(
+    trn_cell_introduce_encrypted_t *inp, struct trn_cell_extension_st *val)
 {
   inp->extensions = val;
   return 0;
 }
 uint8_t
-trn_cell_introduce_encrypted_get_onion_key_type(const trn_cell_introduce_encrypted_t *inp)
+trn_cell_introduce_encrypted_get_onion_key_type(
+    const trn_cell_introduce_encrypted_t *inp)
 {
   return inp->onion_key_type;
 }
 int
-trn_cell_introduce_encrypted_set_onion_key_type(trn_cell_introduce_encrypted_t *inp, uint8_t val)
+trn_cell_introduce_encrypted_set_onion_key_type(
+    trn_cell_introduce_encrypted_t *inp, uint8_t val)
 {
-  if (! ((val == TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR))) {
-     TRUNNEL_SET_ERROR_CODE(inp);
-     return -1;
+  if (!((val == TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR))) {
+    TRUNNEL_SET_ERROR_CODE(inp);
+    return -1;
   }
   inp->onion_key_type = val;
   return 0;
 }
 uint16_t
-trn_cell_introduce_encrypted_get_onion_key_len(const trn_cell_introduce_encrypted_t *inp)
+trn_cell_introduce_encrypted_get_onion_key_len(
+    const trn_cell_introduce_encrypted_t *inp)
 {
   return inp->onion_key_len;
 }
 int
-trn_cell_introduce_encrypted_set_onion_key_len(trn_cell_introduce_encrypted_t *inp, uint16_t val)
+trn_cell_introduce_encrypted_set_onion_key_len(
+    trn_cell_introduce_encrypted_t *inp, uint16_t val)
 {
   inp->onion_key_len = val;
   return 0;
 }
 size_t
-trn_cell_introduce_encrypted_getlen_onion_key(const trn_cell_introduce_encrypted_t *inp)
+trn_cell_introduce_encrypted_getlen_onion_key(
+    const trn_cell_introduce_encrypted_t *inp)
 {
   return TRUNNEL_DYNARRAY_LEN(&inp->onion_key);
 }
 
 uint8_t
-trn_cell_introduce_encrypted_get_onion_key(trn_cell_introduce_encrypted_t *inp, size_t idx)
+trn_cell_introduce_encrypted_get_onion_key(trn_cell_introduce_encrypted_t *inp,
+                                           size_t idx)
 {
   return TRUNNEL_DYNARRAY_GET(&inp->onion_key, idx);
 }
 
 uint8_t
-trn_cell_introduce_encrypted_getconst_onion_key(const trn_cell_introduce_encrypted_t *inp, size_t idx)
+trn_cell_introduce_encrypted_getconst_onion_key(
+    const trn_cell_introduce_encrypted_t *inp, size_t idx)
 {
-  return trn_cell_introduce_encrypted_get_onion_key((trn_cell_introduce_encrypted_t*)inp, idx);
+  return trn_cell_introduce_encrypted_get_onion_key(
+      (trn_cell_introduce_encrypted_t *)inp, idx);
 }
 int
-trn_cell_introduce_encrypted_set_onion_key(trn_cell_introduce_encrypted_t *inp, size_t idx, uint8_t elt)
+trn_cell_introduce_encrypted_set_onion_key(trn_cell_introduce_encrypted_t *inp,
+                                           size_t idx, uint8_t elt)
 {
   TRUNNEL_DYNARRAY_SET(&inp->onion_key, idx, elt);
   return 0;
 }
 int
-trn_cell_introduce_encrypted_add_onion_key(trn_cell_introduce_encrypted_t *inp, uint8_t elt)
+trn_cell_introduce_encrypted_add_onion_key(trn_cell_introduce_encrypted_t *inp,
+                                           uint8_t elt)
 {
 #if SIZE_MAX >= UINT16_MAX
   if (inp->onion_key.n_ == UINT16_MAX)
@@ -877,71 +1289,83 @@ trn_cell_introduce_encrypted_add_onion_key(trn_cell_introduce_encrypted_t *inp, 
 #endif
   TRUNNEL_DYNARRAY_ADD(uint8_t, &inp->onion_key, elt, {});
   return 0;
- trunnel_alloc_failed:
+trunnel_alloc_failed:
   TRUNNEL_SET_ERROR_CODE(inp);
   return -1;
 }
 
 uint8_t *
-trn_cell_introduce_encrypted_getarray_onion_key(trn_cell_introduce_encrypted_t *inp)
+trn_cell_introduce_encrypted_getarray_onion_key(
+    trn_cell_introduce_encrypted_t *inp)
 {
   return inp->onion_key.elts_;
 }
-const uint8_t  *
-trn_cell_introduce_encrypted_getconstarray_onion_key(const trn_cell_introduce_encrypted_t *inp)
+const uint8_t *
+trn_cell_introduce_encrypted_getconstarray_onion_key(
+    const trn_cell_introduce_encrypted_t *inp)
 {
-  return (const uint8_t  *)trn_cell_introduce_encrypted_getarray_onion_key((trn_cell_introduce_encrypted_t*)inp);
+  return (const uint8_t *)trn_cell_introduce_encrypted_getarray_onion_key(
+      (trn_cell_introduce_encrypted_t *)inp);
 }
 int
-trn_cell_introduce_encrypted_setlen_onion_key(trn_cell_introduce_encrypted_t *inp, size_t newlen)
+trn_cell_introduce_encrypted_setlen_onion_key(
+    trn_cell_introduce_encrypted_t *inp, size_t newlen)
 {
   uint8_t *newptr;
 #if UINT16_MAX < SIZE_MAX
   if (newlen > UINT16_MAX)
     goto trunnel_alloc_failed;
 #endif
-  newptr = trunnel_dynarray_setlen(&inp->onion_key.allocated_,
-                 &inp->onion_key.n_, inp->onion_key.elts_, newlen,
-                 sizeof(inp->onion_key.elts_[0]), (trunnel_free_fn_t) NULL,
-                 &inp->trunnel_error_code_);
+  newptr = trunnel_dynarray_setlen(
+      &inp->onion_key.allocated_, &inp->onion_key.n_, inp->onion_key.elts_,
+      newlen, sizeof(inp->onion_key.elts_[0]), (trunnel_free_fn_t)NULL,
+      &inp->trunnel_error_code_);
   if (newlen != 0 && newptr == NULL)
     goto trunnel_alloc_failed;
   inp->onion_key.elts_ = newptr;
   return 0;
- trunnel_alloc_failed:
+trunnel_alloc_failed:
   TRUNNEL_SET_ERROR_CODE(inp);
   return -1;
 }
 uint8_t
-trn_cell_introduce_encrypted_get_nspec(const trn_cell_introduce_encrypted_t *inp)
+trn_cell_introduce_encrypted_get_nspec(
+    const trn_cell_introduce_encrypted_t *inp)
 {
   return inp->nspec;
 }
 int
-trn_cell_introduce_encrypted_set_nspec(trn_cell_introduce_encrypted_t *inp, uint8_t val)
+trn_cell_introduce_encrypted_set_nspec(trn_cell_introduce_encrypted_t *inp,
+                                       uint8_t val)
 {
   inp->nspec = val;
   return 0;
 }
 size_t
-trn_cell_introduce_encrypted_getlen_nspecs(const trn_cell_introduce_encrypted_t *inp)
+trn_cell_introduce_encrypted_getlen_nspecs(
+    const trn_cell_introduce_encrypted_t *inp)
 {
   return TRUNNEL_DYNARRAY_LEN(&inp->nspecs);
 }
 
 struct link_specifier_st *
-trn_cell_introduce_encrypted_get_nspecs(trn_cell_introduce_encrypted_t *inp, size_t idx)
+trn_cell_introduce_encrypted_get_nspecs(trn_cell_introduce_encrypted_t *inp,
+                                        size_t idx)
 {
   return TRUNNEL_DYNARRAY_GET(&inp->nspecs, idx);
 }
 
- const struct link_specifier_st *
-trn_cell_introduce_encrypted_getconst_nspecs(const trn_cell_introduce_encrypted_t *inp, size_t idx)
+const struct link_specifier_st *
+trn_cell_introduce_encrypted_getconst_nspecs(
+    const trn_cell_introduce_encrypted_t *inp, size_t idx)
 {
-  return trn_cell_introduce_encrypted_get_nspecs((trn_cell_introduce_encrypted_t*)inp, idx);
+  return trn_cell_introduce_encrypted_get_nspecs(
+      (trn_cell_introduce_encrypted_t *)inp, idx);
 }
 int
-trn_cell_introduce_encrypted_set_nspecs(trn_cell_introduce_encrypted_t *inp, size_t idx, struct link_specifier_st * elt)
+trn_cell_introduce_encrypted_set_nspecs(trn_cell_introduce_encrypted_t *inp,
+                                        size_t idx,
+                                        struct link_specifier_st *elt)
 {
   link_specifier_t *oldval = TRUNNEL_DYNARRAY_GET(&inp->nspecs, idx);
   if (oldval && oldval != elt)
@@ -949,13 +1373,16 @@ trn_cell_introduce_encrypted_set_nspecs(trn_cell_introduce_encrypted_t *inp, siz
   return trn_cell_introduce_encrypted_set0_nspecs(inp, idx, elt);
 }
 int
-trn_cell_introduce_encrypted_set0_nspecs(trn_cell_introduce_encrypted_t *inp, size_t idx, struct link_specifier_st * elt)
+trn_cell_introduce_encrypted_set0_nspecs(trn_cell_introduce_encrypted_t *inp,
+                                         size_t idx,
+                                         struct link_specifier_st *elt)
 {
   TRUNNEL_DYNARRAY_SET(&inp->nspecs, idx, elt);
   return 0;
 }
 int
-trn_cell_introduce_encrypted_add_nspecs(trn_cell_introduce_encrypted_t *inp, struct link_specifier_st * elt)
+trn_cell_introduce_encrypted_add_nspecs(trn_cell_introduce_encrypted_t *inp,
+                                        struct link_specifier_st *elt)
 {
 #if SIZE_MAX >= UINT8_MAX
   if (inp->nspecs.n_ == UINT8_MAX)
@@ -963,70 +1390,81 @@ trn_cell_introduce_encrypted_add_nspecs(trn_cell_introduce_encrypted_t *inp, str
 #endif
   TRUNNEL_DYNARRAY_ADD(struct link_specifier_st *, &inp->nspecs, elt, {});
   return 0;
- trunnel_alloc_failed:
+trunnel_alloc_failed:
   TRUNNEL_SET_ERROR_CODE(inp);
   return -1;
 }
 
-struct link_specifier_st * *
-trn_cell_introduce_encrypted_getarray_nspecs(trn_cell_introduce_encrypted_t *inp)
+struct link_specifier_st **
+trn_cell_introduce_encrypted_getarray_nspecs(
+    trn_cell_introduce_encrypted_t *inp)
 {
   return inp->nspecs.elts_;
 }
-const struct link_specifier_st *  const  *
-trn_cell_introduce_encrypted_getconstarray_nspecs(const trn_cell_introduce_encrypted_t *inp)
+const struct link_specifier_st *const *
+trn_cell_introduce_encrypted_getconstarray_nspecs(
+    const trn_cell_introduce_encrypted_t *inp)
 {
-  return (const struct link_specifier_st *  const  *)trn_cell_introduce_encrypted_getarray_nspecs((trn_cell_introduce_encrypted_t*)inp);
+  return (const struct link_specifier_st *const *)
+      trn_cell_introduce_encrypted_getarray_nspecs(
+          (trn_cell_introduce_encrypted_t *)inp);
 }
 int
-trn_cell_introduce_encrypted_setlen_nspecs(trn_cell_introduce_encrypted_t *inp, size_t newlen)
+trn_cell_introduce_encrypted_setlen_nspecs(trn_cell_introduce_encrypted_t *inp,
+                                           size_t newlen)
 {
-  struct link_specifier_st * *newptr;
+  struct link_specifier_st **newptr;
 #if UINT8_MAX < SIZE_MAX
   if (newlen > UINT8_MAX)
     goto trunnel_alloc_failed;
 #endif
-  newptr = trunnel_dynarray_setlen(&inp->nspecs.allocated_,
-                 &inp->nspecs.n_, inp->nspecs.elts_, newlen,
-                 sizeof(inp->nspecs.elts_[0]), (trunnel_free_fn_t) link_specifier_free,
-                 &inp->trunnel_error_code_);
+  newptr = trunnel_dynarray_setlen(
+      &inp->nspecs.allocated_, &inp->nspecs.n_, inp->nspecs.elts_, newlen,
+      sizeof(inp->nspecs.elts_[0]), (trunnel_free_fn_t)link_specifier_free,
+      &inp->trunnel_error_code_);
   if (newlen != 0 && newptr == NULL)
     goto trunnel_alloc_failed;
   inp->nspecs.elts_ = newptr;
   return 0;
- trunnel_alloc_failed:
+trunnel_alloc_failed:
   TRUNNEL_SET_ERROR_CODE(inp);
   return -1;
 }
 size_t
-trn_cell_introduce_encrypted_getlen_pad(const trn_cell_introduce_encrypted_t *inp)
+trn_cell_introduce_encrypted_getlen_pad(
+    const trn_cell_introduce_encrypted_t *inp)
 {
   return TRUNNEL_DYNARRAY_LEN(&inp->pad);
 }
 
 uint8_t
-trn_cell_introduce_encrypted_get_pad(trn_cell_introduce_encrypted_t *inp, size_t idx)
+trn_cell_introduce_encrypted_get_pad(trn_cell_introduce_encrypted_t *inp,
+                                     size_t idx)
 {
   return TRUNNEL_DYNARRAY_GET(&inp->pad, idx);
 }
 
 uint8_t
-trn_cell_introduce_encrypted_getconst_pad(const trn_cell_introduce_encrypted_t *inp, size_t idx)
+trn_cell_introduce_encrypted_getconst_pad(
+    const trn_cell_introduce_encrypted_t *inp, size_t idx)
 {
-  return trn_cell_introduce_encrypted_get_pad((trn_cell_introduce_encrypted_t*)inp, idx);
+  return trn_cell_introduce_encrypted_get_pad(
+      (trn_cell_introduce_encrypted_t *)inp, idx);
 }
 int
-trn_cell_introduce_encrypted_set_pad(trn_cell_introduce_encrypted_t *inp, size_t idx, uint8_t elt)
+trn_cell_introduce_encrypted_set_pad(trn_cell_introduce_encrypted_t *inp,
+                                     size_t idx, uint8_t elt)
 {
   TRUNNEL_DYNARRAY_SET(&inp->pad, idx, elt);
   return 0;
 }
 int
-trn_cell_introduce_encrypted_add_pad(trn_cell_introduce_encrypted_t *inp, uint8_t elt)
+trn_cell_introduce_encrypted_add_pad(trn_cell_introduce_encrypted_t *inp,
+                                     uint8_t elt)
 {
   TRUNNEL_DYNARRAY_ADD(uint8_t, &inp->pad, elt, {});
   return 0;
- trunnel_alloc_failed:
+trunnel_alloc_failed:
   TRUNNEL_SET_ERROR_CODE(inp);
   return -1;
 }
@@ -1036,24 +1474,27 @@ trn_cell_introduce_encrypted_getarray_pad(trn_cell_introduce_encrypted_t *inp)
 {
   return inp->pad.elts_;
 }
-const uint8_t  *
-trn_cell_introduce_encrypted_getconstarray_pad(const trn_cell_introduce_encrypted_t *inp)
+const uint8_t *
+trn_cell_introduce_encrypted_getconstarray_pad(
+    const trn_cell_introduce_encrypted_t *inp)
 {
-  return (const uint8_t  *)trn_cell_introduce_encrypted_getarray_pad((trn_cell_introduce_encrypted_t*)inp);
+  return (const uint8_t *)trn_cell_introduce_encrypted_getarray_pad(
+      (trn_cell_introduce_encrypted_t *)inp);
 }
 int
-trn_cell_introduce_encrypted_setlen_pad(trn_cell_introduce_encrypted_t *inp, size_t newlen)
+trn_cell_introduce_encrypted_setlen_pad(trn_cell_introduce_encrypted_t *inp,
+                                        size_t newlen)
 {
   uint8_t *newptr;
-  newptr = trunnel_dynarray_setlen(&inp->pad.allocated_,
-                 &inp->pad.n_, inp->pad.elts_, newlen,
-                 sizeof(inp->pad.elts_[0]), (trunnel_free_fn_t) NULL,
-                 &inp->trunnel_error_code_);
+  newptr = trunnel_dynarray_setlen(
+      &inp->pad.allocated_, &inp->pad.n_, inp->pad.elts_, newlen,
+      sizeof(inp->pad.elts_[0]), (trunnel_free_fn_t)NULL,
+      &inp->trunnel_error_code_);
   if (newlen != 0 && newptr == NULL)
     goto trunnel_alloc_failed;
   inp->pad.elts_ = newptr;
   return 0;
- trunnel_alloc_failed:
+trunnel_alloc_failed:
   TRUNNEL_SET_ERROR_CODE(inp);
   return -1;
 }
@@ -1069,7 +1510,7 @@ trn_cell_introduce_encrypted_check(const trn_cell_introduce_encrypted_t *obj)
     if (NULL != (msg = trn_cell_extension_check(obj->extensions)))
       return msg;
   }
-  if (! (obj->onion_key_type == TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR))
+  if (!(obj->onion_key_type == TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR))
     return "Integer out of bounds";
   if (TRUNNEL_DYNARRAY_LEN(&obj->onion_key) != obj->onion_key_len)
     return "Length mismatch for onion_key";
@@ -1078,7 +1519,8 @@ trn_cell_introduce_encrypted_check(const trn_cell_introduce_encrypted_t *obj)
 
     unsigned idx;
     for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->nspecs); ++idx) {
-      if (NULL != (msg = link_specifier_check(TRUNNEL_DYNARRAY_GET(&obj->nspecs, idx))))
+      if (NULL != (msg = link_specifier_check(
+                       TRUNNEL_DYNARRAY_GET(&obj->nspecs, idx))))
         return msg;
     }
   }
@@ -1088,13 +1530,13 @@ trn_cell_introduce_encrypted_check(const trn_cell_introduce_encrypted_t *obj)
 }
 
 ssize_t
-trn_cell_introduce_encrypted_encoded_len(const trn_cell_introduce_encrypted_t *obj)
+trn_cell_introduce_encrypted_encoded_len(
+    const trn_cell_introduce_encrypted_t *obj)
 {
   ssize_t result = 0;
 
   if (NULL != trn_cell_introduce_encrypted_check(obj))
-     return -1;
-
+    return -1;
 
   /* Length of u8 rend_cookie[TRUNNEL_REND_COOKIE_LEN] */
   result += TRUNNEL_REND_COOKIE_LEN;
@@ -1116,10 +1558,10 @@ trn_cell_introduce_encrypted_encoded_len(const trn_cell_introduce_encrypted_t *o
 
   /* Length of struct link_specifier nspecs[nspec] */
   {
-
     unsigned idx;
     for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->nspecs); ++idx) {
-      result += link_specifier_encoded_len(TRUNNEL_DYNARRAY_GET(&obj->nspecs, idx));
+      result +=
+          link_specifier_encoded_len(TRUNNEL_DYNARRAY_GET(&obj->nspecs, idx));
     }
   }
 
@@ -1135,7 +1577,8 @@ trn_cell_introduce_encrypted_clear_errors(trn_cell_introduce_encrypted_t *obj)
   return r;
 }
 ssize_t
-trn_cell_introduce_encrypted_encode(uint8_t *output, const size_t avail, const trn_cell_introduce_encrypted_t *obj)
+trn_cell_introduce_encrypted_encode(uint8_t *output, const size_t avail,
+                                    const trn_cell_introduce_encrypted_t *obj)
 {
   ssize_t result = 0;
   size_t written = 0;
@@ -1157,28 +1600,32 @@ trn_cell_introduce_encrypted_encode(uint8_t *output, const size_t avail, const t
   if (avail - written < TRUNNEL_REND_COOKIE_LEN)
     goto truncated;
   memcpy(ptr, obj->rend_cookie, TRUNNEL_REND_COOKIE_LEN);
-  written += TRUNNEL_REND_COOKIE_LEN; ptr += TRUNNEL_REND_COOKIE_LEN;
+  written += TRUNNEL_REND_COOKIE_LEN;
+  ptr += TRUNNEL_REND_COOKIE_LEN;
 
   /* Encode struct trn_cell_extension extensions */
   trunnel_assert(written <= avail);
   result = trn_cell_extension_encode(ptr, avail - written, obj->extensions);
   if (result < 0)
     goto fail; /* XXXXXXX !*/
-  written += result; ptr += result;
+  written += result;
+  ptr += result;
 
   /* Encode u8 onion_key_type IN [TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR] */
   trunnel_assert(written <= avail);
   if (avail - written < 1)
     goto truncated;
   trunnel_set_uint8(ptr, (obj->onion_key_type));
-  written += 1; ptr += 1;
+  written += 1;
+  ptr += 1;
 
   /* Encode u16 onion_key_len */
   trunnel_assert(written <= avail);
   if (avail - written < 2)
     goto truncated;
   trunnel_set_uint16(ptr, trunnel_htons(obj->onion_key_len));
-  written += 2; ptr += 2;
+  written += 2;
+  ptr += 2;
 
   /* Encode u8 onion_key[onion_key_len] */
   {
@@ -1189,7 +1636,8 @@ trn_cell_introduce_encrypted_encode(uint8_t *output, const size_t avail, const t
       goto truncated;
     if (elt_len)
       memcpy(ptr, obj->onion_key.elts_, elt_len);
-    written += elt_len; ptr += elt_len;
+    written += elt_len;
+    ptr += elt_len;
   }
 
   /* Encode u8 nspec */
@@ -1197,18 +1645,20 @@ trn_cell_introduce_encrypted_encode(uint8_t *output, const size_t avail, const t
   if (avail - written < 1)
     goto truncated;
   trunnel_set_uint8(ptr, (obj->nspec));
-  written += 1; ptr += 1;
+  written += 1;
+  ptr += 1;
 
   /* Encode struct link_specifier nspecs[nspec] */
   {
-
     unsigned idx;
     for (idx = 0; idx < TRUNNEL_DYNARRAY_LEN(&obj->nspecs); ++idx) {
       trunnel_assert(written <= avail);
-      result = link_specifier_encode(ptr, avail - written, TRUNNEL_DYNARRAY_GET(&obj->nspecs, idx));
+      result = link_specifier_encode(ptr, avail - written,
+                                     TRUNNEL_DYNARRAY_GET(&obj->nspecs, idx));
       if (result < 0)
         goto fail; /* XXXXXXX !*/
-      written += result; ptr += result;
+      written += result;
+      ptr += result;
     }
   }
 
@@ -1220,9 +1670,9 @@ trn_cell_introduce_encrypted_encode(uint8_t *output, const size_t avail, const t
       goto truncated;
     if (elt_len)
       memcpy(ptr, obj->pad.elts_, elt_len);
-    written += elt_len; ptr += elt_len;
+    written += elt_len;
+    ptr += elt_len;
   }
-
 
   trunnel_assert(ptr == output + written);
 #ifdef TRUNNEL_CHECK_ENCODED_LEN
@@ -1235,14 +1685,14 @@ trn_cell_introduce_encrypted_encode(uint8_t *output, const size_t avail, const t
 
   return written;
 
- truncated:
+truncated:
   result = -2;
   goto fail;
- check_failed:
+check_failed:
   (void)msg;
   result = -1;
   goto fail;
- fail:
+fail:
   trunnel_assert(result < 0);
   return result;
 }
@@ -1251,7 +1701,9 @@ trn_cell_introduce_encrypted_encode(uint8_t *output, const size_t avail, const t
  * output object.
  */
 static ssize_t
-trn_cell_introduce_encrypted_parse_into(trn_cell_introduce_encrypted_t *obj, const uint8_t *input, const size_t len_in)
+trn_cell_introduce_encrypted_parse_into(trn_cell_introduce_encrypted_t *obj,
+                                        const uint8_t *input,
+                                        const size_t len_in)
 {
   const uint8_t *ptr = input;
   size_t remaining = len_in;
@@ -1261,26 +1713,30 @@ trn_cell_introduce_encrypted_parse_into(trn_cell_introduce_encrypted_t *obj, con
   /* Parse u8 rend_cookie[TRUNNEL_REND_COOKIE_LEN] */
   CHECK_REMAINING(TRUNNEL_REND_COOKIE_LEN, truncated);
   memcpy(obj->rend_cookie, ptr, TRUNNEL_REND_COOKIE_LEN);
-  remaining -= TRUNNEL_REND_COOKIE_LEN; ptr += TRUNNEL_REND_COOKIE_LEN;
+  remaining -= TRUNNEL_REND_COOKIE_LEN;
+  ptr += TRUNNEL_REND_COOKIE_LEN;
 
   /* Parse struct trn_cell_extension extensions */
   result = trn_cell_extension_parse(&obj->extensions, ptr, remaining);
   if (result < 0)
     goto relay_fail;
   trunnel_assert((size_t)result <= remaining);
-  remaining -= result; ptr += result;
+  remaining -= result;
+  ptr += result;
 
   /* Parse u8 onion_key_type IN [TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR] */
   CHECK_REMAINING(1, truncated);
   obj->onion_key_type = (trunnel_get_uint8(ptr));
-  remaining -= 1; ptr += 1;
-  if (! (obj->onion_key_type == TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR))
+  remaining -= 1;
+  ptr += 1;
+  if (!(obj->onion_key_type == TRUNNEL_HS_INTRO_ONION_KEY_TYPE_NTOR))
     goto fail;
 
   /* Parse u16 onion_key_len */
   CHECK_REMAINING(2, truncated);
   obj->onion_key_len = trunnel_ntohs(trunnel_get_uint16(ptr));
-  remaining -= 2; ptr += 2;
+  remaining -= 2;
+  ptr += 2;
 
   /* Parse u8 onion_key[onion_key_len] */
   CHECK_REMAINING(obj->onion_key_len, truncated);
@@ -1288,25 +1744,29 @@ trn_cell_introduce_encrypted_parse_into(trn_cell_introduce_encrypted_t *obj, con
   obj->onion_key.n_ = obj->onion_key_len;
   if (obj->onion_key_len)
     memcpy(obj->onion_key.elts_, ptr, obj->onion_key_len);
-  ptr += obj->onion_key_len; remaining -= obj->onion_key_len;
+  ptr += obj->onion_key_len;
+  remaining -= obj->onion_key_len;
 
   /* Parse u8 nspec */
   CHECK_REMAINING(1, truncated);
   obj->nspec = (trunnel_get_uint8(ptr));
-  remaining -= 1; ptr += 1;
+  remaining -= 1;
+  ptr += 1;
 
   /* Parse struct link_specifier nspecs[nspec] */
   TRUNNEL_DYNARRAY_EXPAND(link_specifier_t *, &obj->nspecs, obj->nspec, {});
   {
-    link_specifier_t * elt;
+    link_specifier_t *elt;
     unsigned idx;
     for (idx = 0; idx < obj->nspec; ++idx) {
       result = link_specifier_parse(&elt, ptr, remaining);
       if (result < 0)
         goto relay_fail;
       trunnel_assert((size_t)result <= remaining);
-      remaining -= result; ptr += result;
-      TRUNNEL_DYNARRAY_ADD(link_specifier_t *, &obj->nspecs, elt, {link_specifier_free(elt);});
+      remaining -= result;
+      ptr += result;
+      TRUNNEL_DYNARRAY_ADD(link_specifier_t *, &obj->nspecs, elt,
+                           { link_specifier_free(elt); });
     }
   }
 
@@ -1315,24 +1775,26 @@ trn_cell_introduce_encrypted_parse_into(trn_cell_introduce_encrypted_t *obj, con
   obj->pad.n_ = remaining;
   if (remaining)
     memcpy(obj->pad.elts_, ptr, remaining);
-  ptr += remaining; remaining -= remaining;
+  ptr += remaining;
+  remaining -= remaining;
   trunnel_assert(ptr + remaining == input + len_in);
   return len_in - remaining;
 
- truncated:
+truncated:
   return -2;
- relay_fail:
+relay_fail:
   trunnel_assert(result < 0);
   return result;
- trunnel_alloc_failed:
+trunnel_alloc_failed:
   return -1;
- fail:
+fail:
   result = -1;
   return result;
 }
 
 ssize_t
-trn_cell_introduce_encrypted_parse(trn_cell_introduce_encrypted_t **output, const uint8_t *input, const size_t len_in)
+trn_cell_introduce_encrypted_parse(trn_cell_introduce_encrypted_t **output,
+                                   const uint8_t *input, const size_t len_in)
 {
   ssize_t result;
   *output = trn_cell_introduce_encrypted_new();

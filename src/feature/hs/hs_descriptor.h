@@ -65,10 +65,18 @@ struct link_specifier_t;
  * of this constant. */
 #define HS_DESC_AUTH_CLIENT_MULTIPLE 16
 
+/** HRPR: Length of random seed used in the PoW scheme. */
+#define HS_POW_SEED_LEN 32
+
 /** Type of authentication in the descriptor. */
 typedef enum {
   HS_DESC_AUTH_ED25519 = 1
 } hs_desc_auth_type_t;
+
+/** HRPR: Type of PoW in the descriptor. */
+typedef enum {
+  HS_DESC_POW_V1 = 1
+} hs_desc_pow_type_t;
 
 /** Error code when decoding a descriptor. */
 typedef enum {
@@ -94,6 +102,22 @@ typedef enum {
   /* Decoding a descriptor was successful. */
   HS_DESC_DECODE_OK               =  0,
 } hs_desc_decode_status_t;
+
+/** HRPR: Proof-of-Work parameters for DoS defense located in a descriptor. */
+typedef struct hs_desc_pow_params_t {
+  /** Type of PoW system being used, for example "v1". */
+  char *type;
+
+  /** Random 32-byte seed used as input the the PoW hash function. Decoded? */
+  uint8_t seed[HS_POW_SEED_LEN];
+
+  /** Specifies effort value that clients should aim for when contacting the
+   * service. */
+  uint32_t suggested_effort;
+
+  /** Timestamp after which the above seed expires. */
+  time_t expiration_time;
+} hs_desc_pow_params_t;
 
 /** Introduction point information located in a descriptor. */
 typedef struct hs_desc_intro_point_t {
@@ -166,6 +190,12 @@ typedef struct hs_desc_encrypted_data_t {
 
   /** Is this descriptor a single onion service? */
   unsigned int single_onion_service : 1;
+
+  /** Is this descriptor a single onion service? */
+  unsigned int pow_params_present : 1;
+
+  /** HRPR: PoW params, if any. */
+  hs_desc_pow_params_t *pow_params;
 
   /** A list of intro points. Contains hs_desc_intro_point_t objects. */
   smartlist_t *intro_points;

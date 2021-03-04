@@ -13,6 +13,7 @@
 #include "lib/crypt_ops/crypto_ed25519.h"
 
 #include "feature/hs/hs_service.h"
+#include "feature/hs/hs_cell.h"
 
 /* Cleanup function when the circuit is closed or freed. */
 void hs_circ_cleanup_on_close(circuit_t *circ);
@@ -28,17 +29,16 @@ void hs_circ_service_rp_has_opened(const hs_service_t *service,
                                    origin_circuit_t *circ);
 int hs_circ_launch_intro_point(hs_service_t *service,
                                const hs_service_intro_point_t *ip,
-                               extend_info_t *ei,
-                               bool direct_conn);
+                               extend_info_t *ei, bool direct_conn);
 int hs_circ_launch_rendezvous_point(const hs_service_t *service,
                                     const curve25519_public_key_t *onion_key,
                                     const uint8_t *rendezvous_cookie);
 void hs_circ_retry_service_rendezvous_point(origin_circuit_t *circ);
 
-origin_circuit_t *hs_circ_service_get_intro_circ(
-                                      const hs_service_intro_point_t *ip);
-origin_circuit_t *hs_circ_service_get_established_intro_circ(
-                                      const hs_service_intro_point_t *ip);
+origin_circuit_t *
+hs_circ_service_get_intro_circ(const hs_service_intro_point_t *ip);
+origin_circuit_t *
+hs_circ_service_get_established_intro_circ(const hs_service_intro_point_t *ip);
 
 /* Cell API. */
 int hs_circ_handle_intro_established(const hs_service_t *service,
@@ -55,19 +55,39 @@ int hs_circ_handle_introduce2(const hs_service_t *service,
 int hs_circ_send_introduce1(origin_circuit_t *intro_circ,
                             origin_circuit_t *rend_circ,
                             const hs_desc_intro_point_t *ip,
-                            const struct hs_subcredential_t *subcredential);
+                            const struct hs_subcredential_t *subcredential,
+                            const hs_pow_solution_t *pow_solution);
 int hs_circ_send_establish_rendezvous(origin_circuit_t *circ);
 
 /* e2e circuit API. */
-
 int hs_circuit_setup_e2e_rend_circ(origin_circuit_t *circ,
                                    const uint8_t *ntor_key_seed,
-                                   size_t seed_len,
-                                   int is_service_side);
-int hs_circuit_setup_e2e_rend_circ_legacy_client(origin_circuit_t *circ,
-                                          const uint8_t *rend_cell_body);
+                                   size_t seed_len, int is_service_side);
+int
+hs_circuit_setup_e2e_rend_circ_legacy_client(origin_circuit_t *circ,
+                                             const uint8_t *rend_cell_body);
 
 bool hs_circ_is_rend_sent_in_intro1(const origin_circuit_t *circ);
+
+/* HRPR TODO Putting this here for now... */
+typedef struct pending_rend_t {
+  /** Rendezvous circuit params */
+  hs_service_intro_point_t *ip;
+  hs_cell_introduce2_data_t *data;
+
+  /** Effort client exerted in PoW */
+  uint32_t pow_effort;
+
+  /** Position of element in the heap */
+  int idx;
+} pending_rend_t;
+
+void enqueue_rend_circuit(const hs_service_t *service,
+                          hs_service_intro_point_t *ip,
+                          hs_cell_introduce2_data_t *data,
+                          const uint32_t pow_effort);
+
+void handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg);
 
 #ifdef HS_CIRCUIT_PRIVATE
 
@@ -80,10 +100,9 @@ create_rp_circuit_identifier(const hs_service_t *service,
                              const struct hs_ntor_rend_cell_keys_t *keys);
 
 struct hs_cell_introduce2_data_t;
-MOCK_DECL(STATIC void,
-launch_rendezvous_point_circuit,(const hs_service_t *service,
-                                 const hs_service_intro_point_t *ip,
-                                const struct hs_cell_introduce2_data_t *data));
+MOCK_DECL(STATIC void, launch_rendezvous_point_circuit,
+          (const hs_service_t *service, const hs_service_intro_point_t *ip,
+           const struct hs_cell_introduce2_data_t *data));
 
 #endif /* defined(HS_CIRCUIT_PRIVATE) */
 

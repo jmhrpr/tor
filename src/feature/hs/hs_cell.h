@@ -11,6 +11,7 @@
 
 #include "core/or/or.h"
 #include "feature/hs/hs_service.h"
+#include "feature/hs/hs_pow.h"
 
 /** An INTRODUCE1 cell requires at least this amount of bytes (see section
  * 3.2.2 of the specification). Below this value, the cell must be padded. */
@@ -82,6 +83,9 @@ typedef struct hs_cell_introduce2_data_t {
   smartlist_t *link_specifiers;
   /** Replay cache of the introduction point. */
   replaycache_t *replay_cache;
+
+  /** HRPR TODO Just need effort depending on when we verify. */
+  uint32_t pow_effort;
 } hs_cell_introduce2_data_t;
 
 /* Build cell API. */
@@ -95,6 +99,7 @@ ssize_t hs_cell_build_rendezvous1(const uint8_t *rendezvous_cookie,
                                   size_t rendezvous_handshake_info_len,
                                   uint8_t *cell_out);
 ssize_t hs_cell_build_introduce1(const hs_cell_introduce1_data_t *data,
+                                 const hs_pow_solution_t *pow_solution,
                                  uint8_t *cell_out);
 ssize_t hs_cell_build_establish_rendezvous(const uint8_t *rendezvous_cookie,
                                            uint8_t *cell_out);
@@ -115,7 +120,7 @@ void hs_cell_introduce1_data_clear(hs_cell_introduce1_data_t *data);
 
 #ifdef TOR_UNIT_TESTS
 
-#include "trunnel/hs/cell_common.h"
+#  include "trunnel/hs/cell_common.h"
 
 STATIC trn_cell_extension_t *
 build_establish_intro_extensions(const hs_service_config_t *service_config,

@@ -29,6 +29,7 @@
 #include "feature/hs/hs_control.h"
 #include "feature/hs/hs_descriptor.h"
 #include "feature/hs/hs_ident.h"
+#include "feature/hs/hs_pow.h"
 #include "feature/nodelist/describe.h"
 #include "feature/nodelist/microdesc.h"
 #include "feature/nodelist/networkstatus.h"
@@ -646,9 +647,24 @@ send_introduce1(origin_circuit_t *intro_circ,
     goto perm_err;
   }
 
+
+  // HRPR TODO
+  hs_pow_solution_t *pow_solution = tor_malloc_zero(sizeof(hs_pow_solution_t));
+  if (desc->encrypted_data.pow_params_present) {
+    log_err(LD_REND, "SI1: PoW params present in descriptor");
+    log_err(LD_REND, "SI1: Solving PoW...");
+    if (solve_pow(desc->encrypted_data.pow_params, pow_solution)) {
+      log_err(LD_REND, "SI1: PoW solve returned non zero");
+      // HRPR TODO is this the correct error?
+      goto perm_err;
+    }
+  } else {
+    log_err(LD_REND, "SI1: PoW params not present in descriptor");
+  }
+
   /* Send the INTRODUCE1 cell. */
   if (hs_circ_send_introduce1(intro_circ, rend_circ, ip,
-                              &desc->subcredential) < 0) {
+                              &desc->subcredential, pow_solution) < 0) {
     if (TO_CIRCUIT(intro_circ)->marked_for_close) {
       /* If the introduction circuit was closed, we were unable to send the
        * cell for some reasons. In any case, the intro circuit has to be
@@ -702,6 +718,7 @@ send_introduce1(origin_circuit_t *intro_circ,
 
  end:
   memwipe(onion_address, 0, sizeof(onion_address));
+  log_err(LD_REND, "SI1: Status returned is %d", status);
   return status;
 }
 

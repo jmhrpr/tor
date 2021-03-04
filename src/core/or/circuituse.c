@@ -789,11 +789,11 @@ circuit_expire_building(void)
       case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
         /* If we have reached this line, we want to spare the circ for now. */
         log_info(LD_CIRC,"Marking circ %u (state %d:%s, purpose %d) "
-                 "as timed-out HS circ",
+                 "as timed-out HS circ HRPR TODO testing no time out",
                  (unsigned)victim->n_circ_id,
                  victim->state, circuit_state_to_string(victim->state),
                  victim->purpose);
-        TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out = 1;
+        // TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out = 1;
         continue;
       default:
         break;

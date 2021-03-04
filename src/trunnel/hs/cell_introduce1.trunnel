@@ -73,3 +73,31 @@ struct trn_cell_introduce_encrypted {
   /* Optional padding. This might be empty or not. */
   u8 pad[];
 };
+
+/*
+ * INTRODUCE1 cell (encrypted section) extensions.
+ */
+
+const TRUNNEL_CELL_EXTENSION_TYPE_POW = 0x01;
+
+/*
+ * PoW Solution Extension. Proposal 327.
+ */
+
+const TRUNNEL_POW_NONCE_LEN = 16;
+const TRUNNEL_POW_SOLUTION_LEN = 16;
+
+struct trn_cell_extension_pow {
+  /* Type of PoW system used. (v1 in prop327) */
+  u8 pow_version;
+
+  u8 pow_nonce[TRUNNEL_POW_NONCE_LEN];
+
+  u32 pow_effort;
+
+  /* First 4 bytes of the seed. */
+  u32 pow_seed;
+
+  /* Equi-X solution. */
+  u8 pow_solution[TRUNNEL_POW_SOLUTION_LEN];
+};
