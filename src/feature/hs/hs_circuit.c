@@ -1091,21 +1091,20 @@ hs_circ_handle_introduce2(const hs_service_t *service,
     memcpy(data_copy, &data, sizeof(hs_cell_introduce2_data_t));
     enqueue_rend_circuit(service, ip, data_copy, data_copy->pow_effort);
     /* Successfully added rend circuit to priority queue */
-    // launch_rendezvous_point_circuit(service, ip, &data);
-    log_err(LD_REND, "Successfully added to pqueue");
     ret = 0;
+
+    return ret;
   } else {
     /* Launch rendezvous circuit with the onion key and rend cookie. */
     launch_rendezvous_point_circuit(service, ip, &data);
     /* Success. */
     ret = 0;
-
-    /* HRPR Moved here from _done_ label, so above works. */
-    link_specifier_smartlist_free(data.link_specifiers);
-    memwipe(&data, 0, sizeof(data));
   }
 
 done:
+  link_specifier_smartlist_free(data.link_specifiers);
+  memwipe(&data, 0, sizeof(data));
+
   return ret;
 }
 

@@ -428,7 +428,6 @@ build_introduce1_encrypted_pow_extension(const hs_pow_solution_t *pow_solution,
   // trunnel?
   trn_cell_extension_pow_set_pow_version(pow_ext, 1);
 
-  log_err(LD_REND, "hs_cell.c biepe: memcpying nonce");
   memcpy(trn_cell_extension_pow_getarray_pow_nonce(pow_ext),
          &pow_solution->nonce, TRUNNEL_POW_NONCE_LEN);
 
@@ -436,7 +435,6 @@ build_introduce1_encrypted_pow_extension(const hs_pow_solution_t *pow_solution,
 
   trn_cell_extension_pow_set_pow_seed(pow_ext, pow_solution->seed_head);
 
-  log_err(LD_REND, "hs_cell.c biepe: memcpying eqx sol");
   memcpy(trn_cell_extension_pow_getarray_pow_solution(pow_ext),
          &pow_solution->equix_solution, TRUNNEL_POW_SOLUTION_LEN);
 
