@@ -768,20 +768,20 @@ get_inner_encrypted_layer_plaintext(const hs_descriptor_t *desc)
      * "pow-params" SP type SP seed-b64 SP expiration-time NL */
     if (desc->encrypted_data.pow_params_present) {
       /* Base64 the seed */
-      log_err(LD_REND, "SERVICE: PoW params present in descriptor. Encoding them.");
+      log_err(LD_REND, "PoW params present in descriptor. Encoding them.");
       seed_b64_len = base64_encode_size(HS_POW_SEED_LEN, 0) + 1;
       seed_b64 = tor_malloc_zero(seed_b64_len);
       ret_len = base64_encode(seed_b64, seed_b64_len,
                               (char *)desc->encrypted_data.pow_params->seed,
                               HS_POW_SEED_LEN, 0);
-      log_err(LD_REND, "SERVICE: Encoded seed: %s", seed_b64);
+      log_err(LD_REND, "Encoded seed: %s", seed_b64);
       /* Return length doesn't count the NUL byte. */
       tor_assert(ret_len == (seed_b64_len - 1));
 
       /* Convert the expiration time to spaceless ISO format. */
       format_iso_time_nospace(
           time_buf, desc->encrypted_data.pow_params->expiration_time);
-      log_err(LD_REND, "SERVICE: Encoded time: %s", time_buf);
+      log_err(LD_REND, "Encoded time: %s", time_buf);
 
       /* Add "pow-params" line to descriptor. */
       smartlist_add_asprintf(lines, "%s %s %s %u %s\n", str_pow_params,
@@ -2422,7 +2422,7 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
   /* HRPR: Parse DoS defense PoW params. Optional but only once. */
   tok = find_opt_by_keyword(tokens, R3_POW_PARAMS);
   if (tok) {
-    log_err(LD_REND, "CLIENT: PoW params found in descriptor.");
+    log_err(LD_REND, "PoW params found in descriptor.");
     desc_encrypted_out->pow_params_present = 1;
     hs_desc_pow_params_t *pow_params =
         tor_malloc_zero(sizeof(hs_desc_pow_params_t));
@@ -2430,10 +2430,10 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
       log_warn(LD_REND, "PoW params could not be decoded.");
       goto err;
     }
-    log_err(LD_REND, "CLIENT: PoW parse successful.");
+    log_err(LD_REND, "PoW parse successful.");
     desc_encrypted_out->pow_params = pow_params;
   } else {
-    log_err(LD_REND, "CLIENT: No PoW params found.");
+    log_err(LD_REND, "No PoW params found.");
     desc_encrypted_out->pow_params_present = 0;
   }
 

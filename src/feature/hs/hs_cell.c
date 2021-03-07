@@ -493,7 +493,7 @@ build_introduce1_encrypted_extensions(const hs_pow_solution_t *pow_solution)
   // If PoW solution present then include it in the cell extensions
   // TODO better check?
   if (pow_solution->effort != 0) {
-    log_err(LD_REND, "CLIENT: Building PoW solution extension...");
+    log_err(LD_REND, "Building PoW solution extension...");
     ret = build_introduce1_encrypted_pow_extension(pow_solution, extensions);
     if (ret < 0) {
       /* Return no extensions on error. */
@@ -888,16 +888,16 @@ handle_introduce2_encrypted_cell_pow_extension(
           "SERVICE: Successfully parsed. (V: %u | N: %s | E: %u | C: %#06x)",
           trn_cell_extension_pow_get_pow_version(pow),
           hex_str(&pow_sol->nonce, 16), pow_sol->effort, pow_sol->seed_head);
-  log_err(LD_REND, "SERVICE: (S: %s)",
+  log_err(LD_REND, "(S: %s)",
           hex_str(&pow_sol->equix_solution, 16));
 
   // HRPR TODO We don't need to memcpy sol and nonce before we free 'pow', and
   // we only need to bring out the effort to the calling func
   if (verify_pow(service->state.pow_state, pow_sol)) {
-    log_err(LD_REND, "SERVICE: verify_pow failed.");
+    log_err(LD_REND, "verify_pow failed.");
     goto end;
   } else {
-    log_err(LD_REND, "SERVICE: verify_pow succeeded.");
+    log_err(LD_REND, "verify_pow succeeded.");
   }
 
   /* Successfully parsed and verified the PoW solution */
@@ -1144,7 +1144,7 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
   // something similar for DoS defense so maybe bad practice? For now...
   if (service->config.has_pow_defenses_enabled) {
     if (handle_introduce2_encrypted_cell_extensions(service, enc_cell, data)) {
-      log_err(LD_REND, "SERVICE: handle_introduce2_encrypted_cell_extensions failed.");
+      log_err(LD_REND, "handle_introduce2_encrypted_cell_extensions failed.");
       goto done;
     }
   }

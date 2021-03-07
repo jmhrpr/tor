@@ -651,14 +651,14 @@ send_introduce1(origin_circuit_t *intro_circ,
   // HRPR TODO
   hs_pow_solution_t *pow_solution = tor_malloc_zero(sizeof(hs_pow_solution_t));
   if (desc->encrypted_data.pow_params_present) {
-    log_err(LD_REND, "CLIENT: PoW params present in descriptor.");
+    log_err(LD_REND, "PoW params present in descriptor.");
     if (solve_pow(desc->encrypted_data.pow_params, pow_solution)) {
-      log_err(LD_REND, "CLIENT: PoW solve returned non zero.");
+      log_err(LD_REND, "PoW solve returned non zero.");
       // HRPR TODO is this the correct error?
       goto perm_err;
     }
   } else {
-    log_err(LD_REND, "CLIENT: PoW params not present in descriptor.");
+    log_err(LD_REND, "PoW params not present in descriptor.");
   }
 
   /* Send the INTRODUCE1 cell. */

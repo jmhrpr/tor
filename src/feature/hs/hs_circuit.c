@@ -1085,7 +1085,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   ip->introduce2_count++;
 
   if (service->config.has_pow_defenses_enabled) {
-    log_err(LD_REND, "SERVICE: Adding to pqueue with effort: %u", data.pow_effort);
+    log_err(LD_REND, "Adding to pqueue with effort: %u", data.pow_effort);
 
     // HRPR TODO Come back to this bodged fix and think about it more.
     memcpy(data_copy, &data, sizeof(hs_cell_introduce2_data_t));
@@ -1228,7 +1228,7 @@ hs_circ_send_introduce1(origin_circuit_t *intro_circ,
     goto close;
   }
 
-  log_err(LD_REND, "CLIENT: Sending INTRODUCE1 cell...");
+  log_err(LD_REND, "Sending INTRODUCE1 cell...");
   if (relay_send_command_from_edge(
           CONTROL_CELL_ID, TO_CIRCUIT(intro_circ), RELAY_COMMAND_INTRODUCE1,
           (const char *)payload, payload_len, intro_circ->cpath->prev) < 0) {
@@ -1332,25 +1332,25 @@ enqueue_rend_circuit(const hs_service_t *service, hs_service_intro_point_t *ip,
   rend_circuit->pow_effort = pow_effort;
   rend_circuit->idx = -1;
 
-  log_err(LD_REND, "SERVICE: Current pqueue length: %d",
+  log_err(LD_REND, "Current pqueue length: %d",
           smartlist_len(pow_state->rend_circuit_pqueue));
 
-  log_err(LD_REND, "SERVICE: Adding pending rend circuit to pqueue...");
+  log_err(LD_REND, "Adding pending rend circuit to pqueue...");
   smartlist_pqueue_add(pow_state->rend_circuit_pqueue,
                        compare_rend_request_by_effort_,
                        offsetof(pending_rend_t, idx), rend_circuit);
 
-  log_err(LD_REND, "SERVICE: Current pqueue length: %d",
+  log_err(LD_REND, "Current pqueue length: %d",
           smartlist_len(pow_state->rend_circuit_pqueue));
 
   if (pow_state->pop_pqueue_ev == NULL) {
     // init pqueue event.
-    log_err(LD_REND, "SERVICE: Initiating pqueue pop event...");
+    log_err(LD_REND, "Initiating pqueue pop event...");
     pow_state->pop_pqueue_ev =
         mainloop_event_new(handle_rend_pqueue_cb, (void *)service);
   }
 
-  log_err(LD_REND, "SERVICE: Activating pqueue pop event...");
+  log_err(LD_REND, "Activating pqueue pop event...");
   mainloop_event_activate(pow_state->pop_pqueue_ev);
 }
 
@@ -1362,24 +1362,24 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
   hs_service_pow_state_t *pow_state = service->state.pow_state;
   pending_rend_t *rend_circuit = tor_malloc_zero(sizeof(pending_rend_t));
 
-  log_err(LD_REND, "SERVICE: Current pqueue length: %d",
+  log_err(LD_REND, "Current pqueue length: %d",
           smartlist_len(pow_state->rend_circuit_pqueue));
 
-  log_err(LD_REND, "SERVICE: Popping from pqueue...");
+  log_err(LD_REND, "Popping from pqueue...");
   rend_circuit = smartlist_pqueue_pop(pow_state->rend_circuit_pqueue,
                                       compare_rend_request_by_effort_,
                                       offsetof(pending_rend_t, idx));
 
-  log_err(LD_REND, "SERVICE: Popped pending rend circuit, which had effort: %u",
+  log_err(LD_REND, "Popped pending rend circuit, which had effort: %u",
           rend_circuit->pow_effort);
 
-  log_err(LD_REND, "SERVICE: Current pqueue length: %d",
+  log_err(LD_REND, "Current pqueue length: %d",
           smartlist_len(pow_state->rend_circuit_pqueue));
 
-  log_err(LD_REND, "SERVICE: Launching rendezvous point circuit...");
+  log_err(LD_REND, "Launching rendezvous point circuit...");
   launch_rendezvous_point_circuit(service, rend_circuit->ip,
                                   rend_circuit->data);
-  log_err(LD_REND, "SERVICE: Finished launching.");
+  log_err(LD_REND, "Finished launching.");
 
   // HRPR TODO Idk if this is correct, check later
   link_specifier_smartlist_free(rend_circuit->data->link_specifiers);
@@ -1388,7 +1388,7 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
   /* If there are still some pending rendezvous circuits in the pqueue then
    * reschedule the event in order to continue handling them. */
   if (smartlist_len(pow_state->rend_circuit_pqueue)) {
-    log_err(LD_REND, "SERVICE: Still pending circuits in pqueue, reactivating pop event...");
+    log_err(LD_REND, "Still pending circuits in pqueue, reactivating pop event...");
     mainloop_event_activate(pow_state->pop_pqueue_ev);
   }
 }
