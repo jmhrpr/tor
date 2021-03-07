@@ -876,7 +876,7 @@ handle_introduce2_encrypted_cell_pow_extension(
   // TODO no version in sol struct (should be tyoe also?)
   // pow_sol->version = trn_cell_extension_pow_get_pow_version(pow);
   log_err(LD_REND,
-          "SERVICE: Parsing PoW solution from INTRODUCE cell extension...");
+          "Parsing PoW solution from INTRODUCE cell extension...");
   memcpy(&pow_sol->nonce, trn_cell_extension_pow_getconstarray_pow_nonce(pow),
          16);
   pow_sol->effort = trn_cell_extension_pow_get_pow_effort(pow);
@@ -885,7 +885,7 @@ handle_introduce2_encrypted_cell_pow_extension(
          trn_cell_extension_pow_getconstarray_pow_solution(pow), 16);
 
   log_err(LD_REND,
-          "SERVICE: Successfully parsed. (V: %u | N: %s | E: %u | C: %#06x)",
+          "Successfully parsed. (V: %u | N: %s | E: %u | C: %#06x)",
           trn_cell_extension_pow_get_pow_version(pow),
           hex_str(&pow_sol->nonce, 16), pow_sol->effort, pow_sol->seed_head);
   log_err(LD_REND, "(S: %s)",
@@ -943,7 +943,7 @@ handle_introduce2_encrypted_cell_extensions(
       if (handle_introduce2_encrypted_cell_pow_extension(service, field,
                                                          pow_sol)) {
         log_err(LD_REND,
-                "SERVICE: handle_introduce2_encrypted_cell_pow_extension failed.");
+                "handle_introduce2_encrypted_cell_pow_extension failed.");
         goto end;
       }
       // HRPR TODO following is broken, and i assume for eqxsol too.

@@ -1997,7 +1997,7 @@ rotate_pow_seeds(hs_service_t *service, hs_service_descriptor_t *desc, time_t no
 
   if (now > pow_state->expiration_time) {
     log_err(LD_REND,
-            "SERVICE: Seed expired. Rotating PoW seeds, generating new current seed.");
+            "Seed expired. Rotating PoW seeds, generating new current seed.");
 
     /* Keep track of the current seed that we are rotating. */
     memcpy(pow_state->seed_previous, pow_state->seed_current, HS_POW_SEED_LEN);
@@ -3894,7 +3894,7 @@ hs_service_add_ephemeral(ed25519_secret_key_t *sk, smartlist_t *ports,
     goto err;
   }
 
-  log_info(LD_CONFIG, "Added ephemeral v3 onion service: %s",
+  log_info(LD_CONFIG, "Added ephemeral v3 onion %s",
            safe_str_client(service->onion_address));
 
   *address_out = tor_strdup(service->onion_address);
@@ -3952,7 +3952,7 @@ hs_service_del_ephemeral(const char *address)
   remove_service(hs_service_map, service);
   hs_service_free(service);
 
-  log_info(LD_CONFIG, "Removed ephemeral v3 hidden service: %s",
+  log_info(LD_CONFIG, "Removed ephemeral v3 hidden %s",
            safe_str_client(address));
   return 0;
 
