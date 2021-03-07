@@ -1258,31 +1258,31 @@ decode_pow_params(const directory_token_t *tok,
   tor_assert(pow_params);
 
   /* Find the type of PoW system being used. */
-  log_err(LD_REND, "CLIENT: Searching for PoW type...");
+  log_err(LD_REND, "Searching for PoW type...");
   int match = 0;
   for (int idx = 0; pow_types[idx].identifier; idx++) {
     if (!strncmp(tok->args[0], pow_types[idx].identifier,
                  strlen(pow_types[idx].identifier))) {
       pow_params->type = tok->args[0];
       match = 1;
-      log_err(LD_REND, "CLIENT: PoW type found: %s", pow_params->type);
+      log_err(LD_REND, "PoW type found: %s", pow_params->type);
       break;
     }
   }
   if (!match) {
-    log_warn(LD_REND, "CLIENT: Couldn't match PoW type...");
+    log_warn(LD_REND, "Couldn't match PoW type...");
     goto done;
   }
 
   if (base64_decode((char *)pow_params->seed, sizeof(pow_params->seed),
                     tok->args[1],
                     strlen(tok->args[1])) != sizeof(pow_params->seed)) {
-    log_warn(LD_REND, "CLIENT: Unparseable seed %s in PoW params",
+    log_warn(LD_REND, "Unparseable seed %s in PoW params",
              escaped(tok->args[1]));
     goto done;
   }
 
-  log_err(LD_REND, "CLIENT: Decoded PoW seed: %s", hex_str(&pow_params->seed, 32));
+  log_err(LD_REND, "Decoded PoW seed: %s", hex_str(&pow_params->seed, 32));
 
   int ok;
   unsigned long effort =
@@ -1293,7 +1293,7 @@ decode_pow_params(const directory_token_t *tok,
     goto done;
   }
   pow_params->suggested_effort = effort;
-  log_err(LD_REND, "CLIENT: PoW suggested effort: %d", pow_params->suggested_effort);
+  log_err(LD_REND, "PoW suggested effort: %d", pow_params->suggested_effort);
 
   /* Expiration time: do we need to store this or just a check sufficient? */
   time_t expiration_time = 0;
@@ -1303,7 +1303,7 @@ decode_pow_params(const directory_token_t *tok,
     goto done;
   }
   pow_params->expiration_time = expiration_time;
-  log_err(LD_REND, "CLIENT: Decoded PoW expiration time: %ld",
+  log_err(LD_REND, "Decoded PoW expiration time: %ld",
           pow_params->expiration_time);
   if (time(NULL) >= expiration_time) {
     log_warn(LD_REND, "PoW params have expired. Fetch new descriptor.");
