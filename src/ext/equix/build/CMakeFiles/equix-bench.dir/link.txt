@@ -1,0 +1,1 @@
+/usr/bin/cc  -O3 -DNDEBUG   CMakeFiles/equix-bench.dir/src/bench.c.o CMakeFiles/equix-bench.dir/hashx/src/hashx_thread.c.o CMakeFiles/equix-bench.dir/hashx/src/hashx_time.c.o  -o equix-bench -rdynamic libequix.a -pthread hashx/libhashx.a 

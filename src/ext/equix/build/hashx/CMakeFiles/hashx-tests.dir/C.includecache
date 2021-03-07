@@ -1,0 +1,36 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../hashx/include/hashx.h
+hashx.h
+-
+stdio.h
+-
+stdint.h
+-
+stddef.h
+-
+
+/vagrant/tor/src/ext/equix/hashx/src/test_utils.h
+stdio.h
+-
+stdbool.h
+-
+string.h
+-
+stdlib.h
+-
+hashx.h
+-
+
+/vagrant/tor/src/ext/equix/hashx/src/tests.c
+assert.h
+-
+test_utils.h
+/vagrant/tor/src/ext/equix/hashx/src/test_utils.h
+

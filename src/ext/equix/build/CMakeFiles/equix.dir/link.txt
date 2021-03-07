@@ -1,0 +1,1 @@
+/usr/bin/cc  -fPIC -O3 -DNDEBUG  -shared -Wl,-soname,libequix.so.1 -o libequix.so.1.0.0 CMakeFiles/equix.dir/src/context.c.o CMakeFiles/equix.dir/src/equix.c.o CMakeFiles/equix.dir/src/solver.c.o hashx/libhashx.a 

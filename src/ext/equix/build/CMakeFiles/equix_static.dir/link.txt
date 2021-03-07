@@ -1,0 +1,2 @@
+/usr/bin/ar qc libequix.a  CMakeFiles/equix_static.dir/src/context.c.o CMakeFiles/equix_static.dir/src/equix.c.o CMakeFiles/equix_static.dir/src/solver.c.o
+/usr/bin/ranlib libequix.a

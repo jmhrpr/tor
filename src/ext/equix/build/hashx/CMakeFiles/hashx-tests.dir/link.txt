@@ -1,0 +1,1 @@
+/usr/bin/cc  -O3 -DNDEBUG   CMakeFiles/hashx-tests.dir/src/tests.c.o  -o hashx-tests -rdynamic libhashx.a 

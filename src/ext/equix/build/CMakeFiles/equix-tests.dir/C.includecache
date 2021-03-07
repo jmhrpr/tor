@@ -1,0 +1,24 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../include/equix.h
+stdint.h
+-
+stddef.h
+-
+
+/vagrant/tor/src/ext/equix/src/tests.c
+assert.h
+-
+equix.h
+-
+stdbool.h
+-
+stdio.h
+-
+

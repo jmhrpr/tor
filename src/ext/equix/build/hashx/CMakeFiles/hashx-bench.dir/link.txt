@@ -1,0 +1,1 @@
+/usr/bin/cc  -O3 -DNDEBUG   CMakeFiles/hashx-bench.dir/src/bench.c.o CMakeFiles/hashx-bench.dir/src/hashx_thread.c.o CMakeFiles/hashx-bench.dir/src/hashx_time.c.o  -o hashx-bench -rdynamic libhashx.a -pthread 
