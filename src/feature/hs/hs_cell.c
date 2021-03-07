@@ -493,6 +493,7 @@ build_introduce1_encrypted_extensions(const hs_pow_solution_t *pow_solution)
   // If PoW solution present then include it in the cell extensions
   // TODO better check?
   if (pow_solution->effort != 0) {
+    log_err(LD_REND, "CLIENT: Building PoW solution extension...");
     ret = build_introduce1_encrypted_pow_extension(pow_solution, extensions);
     if (ret < 0) {
       /* Return no extensions on error. */
@@ -866,54 +867,40 @@ handle_introduce2_encrypted_cell_pow_extension(
 
   tor_assert(field);
 
-  // ret = trn_cell_extension_pow_parse(
-  //     &pow, trn_cell_extension_field_getconstarray_field(field),
-  //     trn_cell_extension_field_getlen_field(field));
-  // if (ret < 0) {
-  //   goto end;
-  // }
   if (trn_cell_extension_pow_parse(
           &pow, trn_cell_extension_field_getconstarray_field(field),
           trn_cell_extension_field_getlen_field(field)) < 0) {
     goto end;
   }
 
-  // TODO no version in sol struct
+  // TODO no version in sol struct (should be tyoe also?)
   // pow_sol->version = trn_cell_extension_pow_get_pow_version(pow);
-  log_err(LD_REND, "CELL: HIDDEN SERVICE PARSING POW EXT...");
-  log_err(LD_REND, "CELL: parse nonce");
+  log_err(LD_REND,
+          "SERVICE: Parsing PoW solution from INTRODUCE cell extension...");
   memcpy(&pow_sol->nonce, trn_cell_extension_pow_getconstarray_pow_nonce(pow),
          16);
-  // pow_sol->nonce = trn_cell_extension_pow_getconstarray_pow_nonce(pow);
-  log_err(LD_REND, "CELL: parse effort");
   pow_sol->effort = trn_cell_extension_pow_get_pow_effort(pow);
-  log_err(LD_REND, "CELL: parse seed head");
   pow_sol->seed_head = trn_cell_extension_pow_get_pow_seed(pow);
-  log_err(LD_REND, "CELL: parse eqx solution");
   memcpy(&pow_sol->equix_solution,
          trn_cell_extension_pow_getconstarray_pow_solution(pow), 16);
 
-  log_err(LD_REND, "CELL: completed handle introduce2 pow extension parse");
+  log_err(LD_REND,
+          "SERVICE: Successfully parsed. (V: %u | N: %s | E: %u | C: %#06x)",
+          trn_cell_extension_pow_get_pow_version(pow),
+          hex_str(&pow_sol->nonce, 16), pow_sol->effort, pow_sol->seed_head);
+  log_err(LD_REND, "SERVICE: (S: %s)",
+          hex_str(&pow_sol->equix_solution, 16));
 
-  // CHECK PARSE
-  log_err(LD_REND, "PARSED V: %u",
-          trn_cell_extension_pow_get_pow_version(pow));
-  log_err(LD_REND, "PARSED N: %s", hex_str(&pow_sol->nonce, 16));
-  log_err(LD_REND, "PARSED E: %u", pow_sol->effort);
-  log_err(LD_REND, "PARSED SH: %#06x", pow_sol->seed_head);
-  log_err(LD_REND, "PARSED ES: %s", hex_str(&pow_sol->equix_solution, 16));
-  // log_err(LD_REND, "PARSED ES2: %s", hex_str(&pow_sol->equix_solution, 16));
-
-  // TODO validate solution here? In that case, we don't need to memcpy sol
-  // and nonce before we free 'pow', and we only need to bring out the effort
-  // to the calling func
+  // HRPR TODO We don't need to memcpy sol and nonce before we free 'pow', and
+  // we only need to bring out the effort to the calling func
   if (verify_pow(service->state.pow_state, pow_sol)) {
-    log_err(LD_REND, "verify_pow failed.");
+    log_err(LD_REND, "SERVICE: verify_pow failed.");
     goto end;
   } else {
-    log_err(LD_REND, "verify_pow succeeded.");
+    log_err(LD_REND, "SERVICE: verify_pow succeeded.");
   }
 
+  /* Successfully parsed and verified the PoW solution */
   ret = 0;
 end:
   trn_cell_extension_pow_free(pow);
@@ -956,18 +943,14 @@ handle_introduce2_encrypted_cell_extensions(
       if (handle_introduce2_encrypted_cell_pow_extension(service, field,
                                                          pow_sol)) {
         log_err(LD_REND,
-                "handle_introduce2_encrypted_cell_pow_extension failed.");
+                "SERVICE: handle_introduce2_encrypted_cell_pow_extension failed.");
         goto end;
-      } else {
-        log_err(LD_REND,
-                "handle_introduce2_encrypted_cell_pow_extension succeeded.");
       }
       // HRPR TODO following is broken, and i assume for eqxsol too.
       // Not sure why, but it doesn't matter if we verify the pow within
       // handle_..._pow_extension.
       // log_err(LD_REND, "test pow_sol nonce");
       // log_err(LD_REND, "PARSED N: %s", hex_str(&pow_sol->nonce, 16));
-      log_err(LD_REND, "setting data->pow_effort");
       data->pow_effort = pow_sol->effort;
       break;
     default:
@@ -1161,10 +1144,8 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
   // something similar for DoS defense so maybe bad practice? For now...
   if (service->config.has_pow_defenses_enabled) {
     if (handle_introduce2_encrypted_cell_extensions(service, enc_cell, data)) {
-      log_err(LD_REND, "handle_introduce2_encrypted_cell_extensions failed.");
+      log_err(LD_REND, "SERVICE: handle_introduce2_encrypted_cell_extensions failed.");
       goto done;
-    } else {
-      log_err(LD_REND, "handle_introduce2_encrypted_cell_extensions succeeded.");
     }
   }
 

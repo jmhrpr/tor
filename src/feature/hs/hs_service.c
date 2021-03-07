@@ -1779,11 +1779,11 @@ build_service_desc_encrypted(hs_service_t *service,
   encrypted->pow_params = tor_malloc_zero(sizeof(hs_desc_pow_params_t));
   if (service->config.has_pow_defenses_enabled) {
     encrypted->pow_params_present = 1;
-    encrypted->pow_params->type = (char *)"v1"; // HRPR TODO Only type for now
+    encrypted->pow_params->type = "v1"; // HRPR TODO Only type for now
     memcpy(encrypted->pow_params->seed, &pow_state->seed_current,
            HS_POW_SEED_LEN);
     encrypted->pow_params->suggested_effort =
-        pow_state->min_effort; // HRPR TODO Hardcoded effort
+        pow_state->min_effort; // HRPR TODO Using hardcoded effort
     encrypted->pow_params->expiration_time = pow_state->expiration_time;
   } else {
     encrypted->pow_params_present = 0;
@@ -1997,7 +1997,7 @@ rotate_pow_seeds(hs_service_t *service, hs_service_descriptor_t *desc, time_t no
 
   if (now > pow_state->expiration_time) {
     log_err(LD_REND,
-            "Seed expired. Rotating PoW seeds, generating new current seed.");
+            "SERVICE: Seed expired. Rotating PoW seeds, generating new current seed.");
 
     /* Keep track of the current seed that we are rotating. */
     memcpy(pow_state->seed_previous, pow_state->seed_current, HS_POW_SEED_LEN);
@@ -2017,11 +2017,11 @@ rotate_pow_seeds(hs_service_t *service, hs_service_descriptor_t *desc, time_t no
     {
       char fmt_next_time[ISO_TIME_LEN + 1];
       format_local_iso_time(fmt_next_time, pow_state->expiration_time);
-      log_err(LD_REND, "PoW state expiration time set to: %s", fmt_next_time);
+      log_err(LD_REND, "SERVICE: PoW state expiration time set to: %s", fmt_next_time);
     }
 
-    log_err(LD_REND, "C_c: %s", hex_str(pow_state->seed_current, 32));
-    log_err(LD_REND, "C_p: %s", hex_str(pow_state->seed_previous, 32));
+    log_err(LD_REND, "SERVICE: C_c: %s", hex_str(pow_state->seed_current, 32));
+    log_err(LD_REND, "SERVICE: C_p: %s", hex_str(pow_state->seed_previous, 32));
   }
 }
 
@@ -3131,7 +3131,7 @@ upload_descriptor_to_all(const hs_service_t *service,
      * routerstatus_t found in the consensus else we have a problem. */
     tor_assert(hsdir_node);
     /* Upload this descriptor to the chosen directory. */
-    log_err(LD_REND, "Uploading descriptor to hsdir"); // HRPR
+    log_err(LD_REND, "SERVICE: Uploading descriptor to HSDir"); // HRPR
     upload_descriptor_to_hsdir(service, desc, hsdir_node);
   }
   SMARTLIST_FOREACH_END(hsdir_rs);
@@ -4415,7 +4415,7 @@ hs_service_new(const or_options_t *options)
 
   // HRPR TODO I think move this?
   if (service->config.has_pow_defenses_enabled) {
-    log_err(LD_REND, "PoW defenses enabled (hs_service_new)");
+    log_err(LD_REND, "SERVICE: PoW defenses enabled.");
     service->state.pow_state = tor_malloc_zero(sizeof(hs_service_pow_state_t));
     hs_service_pow_state_t *pow_state = service->state.pow_state;
     pow_state->rend_circuit_pqueue = smartlist_new();
@@ -4427,13 +4427,13 @@ hs_service_new(const or_options_t *options)
     previous seed to be predictable even if it doesn't really exist yet. TODO
     generate only current as rotate will be called? */
     // HRPR TODO actually lets make them the same
-    log_err(LD_REND, "Generating both PoW seeds.");
+    log_err(LD_REND, "SERVICE: Generating both PoW seeds...");
     crypto_rand((char *)&pow_state->seed_current, HS_POW_SEED_LEN);
     // crypto_rand((char *)&pow_state->seed_previous, HS_POW_SEED_LEN);
     memcpy(&pow_state->seed_previous, &pow_state->seed_current,
            HS_POW_SEED_LEN);
-    log_err(LD_REND, "C_c: %s", hex_str(pow_state->seed_current, 32));
-    log_err(LD_REND, "C_p: %s", hex_str(pow_state->seed_previous, 32));
+    log_err(LD_REND, "SERVICE: C_c: %s", hex_str(pow_state->seed_current, 32));
+    log_err(LD_REND, "SERVICE: C_p: %s", hex_str(pow_state->seed_previous, 32));
 
     pow_state->expiration_time =
         (time(NULL) +

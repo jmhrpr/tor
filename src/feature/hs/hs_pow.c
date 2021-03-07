@@ -67,13 +67,12 @@ solve_pow(hs_desc_pow_params_t *pow_params,
   tor_assert(challenge_len == offset);
 
   /* Temporary logging */
-  log_err(LD_REND, "C: %s", hex_str(pow_params->seed, 32));
-
+  log_err(LD_REND, "CLIENT: (C: %s)", hex_str(pow_params->seed, 32));
   char hex_nonce[HS_POW_NONCE_LEN * 2 + 1];
   memset(hex_nonce, 0, HS_POW_NONCE_LEN * 2 + 1);
   base16_encode(hex_nonce, HS_POW_NONCE_LEN * 2 + 1, &nonce, HS_POW_NONCE_LEN);
-  log_err(LD_REND, "N: %s", hex_nonce);
-  log_err(LD_REND, "E: %u (%s)", effort, hex_str(&effort, 4));
+  log_err(LD_REND, "CLIENT: (N: %s)", hex_nonce);
+  log_err(LD_REND, "CLIENT: (E: %u (%s))", effort, hex_str(&effort, 4));
 
   /* Initialise EquiX and blake2b. */
   uint8_t success = 0;
@@ -87,7 +86,7 @@ solve_pow(hs_desc_pow_params_t *pow_params,
   blake2b_state S[1];
 
   /* Repeatedly increment the nonce in attempt to find a valid solution. */
-  log_err(LD_REND, "Solving proof of work...");
+  log_err(LD_REND, "CLIENT: Solving proof of work...");
   while (success == 0) {
     /* Calculate S = equix_solve(C || N || E) */
 
@@ -122,14 +121,14 @@ solve_pow(hs_desc_pow_params_t *pow_params,
       success = 1;
 
       /* Temporary logging. */
-      log_err(LD_REND, "Success after %u attempts. INT_32(R)*E = %lu <= %u.",
+      log_err(LD_REND, "CLIENT: Success after %u attempts. INT_32(R)*E = %lu <= %u.",
               count, (uint64_t)hash_result_netorder * effort, UINT32_MAX);
       char hex_challenge[2 * challenge_len + 1];
       memset(hex_challenge, 0, 2 * challenge_len + 1);
       base16_encode(hex_challenge, 2 * challenge_len + 1, challenge,
                     challenge_len);
-      log_err(LD_REND, "C || N || INT_32(E): %s", hex_challenge);
-      log_err(LD_REND, "S: %s", hex_str(&solution[0], 16));
+      log_err(LD_REND, "CLIENT: C || N || INT_32(E): %s", hex_challenge);
+      log_err(LD_REND, "CLIENT: S: %s", hex_str(&solution[0], 16));
 
       /* Store the information required in a solution */
       pow_solution_out->nonce = nonce;
@@ -170,13 +169,13 @@ verify_pow(hs_service_pow_state_t *pow_state, hs_pow_solution_t *pow_solution)
   /* Find a valid seed C that starts with the seed head. Fail if no such seed
    * exists. */
   if (get_uint32(pow_state->seed_current) == pow_solution->seed_head) {
-    log_err(LD_REND, "Seed head matched current seed.");
+    log_err(LD_REND, "SERVICE: Seed head matched current seed.");
     seed = pow_state->seed_current;
   } else if (get_uint32(pow_state->seed_previous) == pow_solution->seed_head) {
-    log_err(LD_REND, "Seed head matched previous seed.");
+    log_err(LD_REND, "SERVICE: Seed head matched previous seed.");
     seed = pow_state->seed_previous;
   } else {
-    log_err(LD_REND, "Seed head didn't match either seed.");
+    log_err(LD_REND, "SERVICE: Seed head didn't match either seed.");
     goto done;
   }
 
@@ -209,7 +208,7 @@ verify_pow(hs_service_pow_state_t *pow_state, hs_pow_solution_t *pow_solution)
 
   uint32_t hash_result_netorder = tor_htonl(get_uint32(hash_result));
   if ((uint64_t)hash_result_netorder * pow_solution->effort > UINT32_MAX) {
-    log_err(LD_REND, "Product of b2 hash and effort was too large.");
+    log_err(LD_REND, "SERVICE: Product of b2 hash and effort was too large.");
     goto done;
   }
 
@@ -223,7 +222,7 @@ verify_pow(hs_service_pow_state_t *pow_state, hs_pow_solution_t *pow_solution)
                                      &pow_solution->equix_solution);
   if (!(result == EQUIX_OK)) {
     // log_err(LD_REND, "EquiX solution: OK, %d solutions", num_solutions);
-    log_err(LD_REND, "Verification of EquiX solution in PoW failed.");
+    log_err(LD_REND, "SERVICE: Verification of EquiX solution in PoW failed.");
     goto done;
   }
 
