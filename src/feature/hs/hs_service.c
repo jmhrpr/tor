@@ -2006,8 +2006,10 @@ rotate_pow_seeds(hs_service_t *service, hs_service_descriptor_t *desc, time_t no
     crypto_rand((char *)pow_state->seed_current, HS_POW_SEED_LEN);
 
     /* Update the descriptor with the new seed. */
-    memcpy(&desc->desc->encrypted_data.pow_params->seed,
+    memcpy(desc->desc->encrypted_data.pow_params->seed,
            pow_state->seed_current, HS_POW_SEED_LEN);
+
+    log_err(LD_REND, "C_c: %s", hex_str(pow_state->seed_current, 32));
 
     /* Update the expiration time for the new seed. */
     pow_state->expiration_time =
@@ -2020,8 +2022,14 @@ rotate_pow_seeds(hs_service_t *service, hs_service_descriptor_t *desc, time_t no
       log_err(LD_REND, "PoW state expiration time set to: %s", fmt_next_time);
     }
 
+    desc->desc->encrypted_data.pow_params->expiration_time =
+        pow_state->expiration_time;
+
     log_err(LD_REND, "C_c: %s", hex_str(pow_state->seed_current, 32));
     log_err(LD_REND, "C_p: %s", hex_str(pow_state->seed_previous, 32));
+
+    /** Mark that we should use the updated descriptor HRPR TODO correct? */
+    service_desc_schedule_upload(desc, now, 1);
   }
 }
 
