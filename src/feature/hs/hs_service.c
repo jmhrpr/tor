@@ -927,6 +927,9 @@ move_hs_state(hs_service_t *src_service, hs_service_t *dst_service)
 
     src->ob_subcreds = NULL; /* steal pointer reference */
   }
+
+  /* HRPR */
+  dst->pow_state = src->pow_state;
 }
 
 /** Register services that are in the staging list. Once this function returns,
@@ -2025,8 +2028,8 @@ rotate_pow_seeds(hs_service_t *service, hs_service_descriptor_t *desc, time_t no
     desc->desc->encrypted_data.pow_params->expiration_time =
         pow_state->expiration_time;
 
-    log_err(LD_REND, "C_c: %s", hex_str(pow_state->seed_current, 32));
-    log_err(LD_REND, "C_p: %s", hex_str(pow_state->seed_previous, 32));
+    log_err(LD_REND, "Current C: %s", hex_str(pow_state->seed_current, 32));
+    log_err(LD_REND, "Previous C: %s", hex_str(pow_state->seed_previous, 32));
 
     /** Mark that we should use the updated descriptor HRPR TODO correct? */
     service_desc_schedule_upload(desc, now, 1);

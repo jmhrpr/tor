@@ -67,12 +67,12 @@ solve_pow(hs_desc_pow_params_t *pow_params,
   tor_assert(challenge_len == offset);
 
   /* Temporary logging */
-  log_err(LD_REND, "(C: %s)", hex_str(pow_params->seed, 32));
+  log_err(LD_REND, "C: %s", hex_str(pow_params->seed, 32));
   char hex_nonce[HS_POW_NONCE_LEN * 2 + 1];
   memset(hex_nonce, 0, HS_POW_NONCE_LEN * 2 + 1);
   base16_encode(hex_nonce, HS_POW_NONCE_LEN * 2 + 1, &nonce, HS_POW_NONCE_LEN);
-  log_err(LD_REND, "(N: %s)", hex_nonce);
-  log_err(LD_REND, "(E: %u (%s))", effort, hex_str(&effort, 4));
+  log_err(LD_REND, "N: %s", hex_nonce);
+  log_err(LD_REND, "E: %u | Hex: %s)", effort, hex_str(&effort, 4));
 
   /* Initialise EquiX and blake2b. */
   uint8_t success = 0;
