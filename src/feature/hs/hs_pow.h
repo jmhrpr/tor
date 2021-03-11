@@ -29,7 +29,7 @@ typedef struct hs_service_pow_state_t {
    * the service's priority queue. */
   mainloop_event_t *pop_pqueue_ev;
 
-  // HRPR TODO
+  // HRPR TODO Docs
   uint8_t seed_current[HS_POW_SEED_LEN];
 
   uint8_t seed_previous[HS_POW_SEED_LEN];
@@ -39,8 +39,6 @@ typedef struct hs_service_pow_state_t {
   uint32_t suggested_effort;
 
   time_t expiration_time;
-
-  // replaycache_t *replay_cache_pow_sol;
 } hs_service_pow_state_t;
 
 // N E C[:4](seed) S

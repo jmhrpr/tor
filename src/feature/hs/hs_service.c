@@ -42,6 +42,7 @@
 #include "feature/hs/hs_ident.h"
 #include "feature/hs/hs_intropoint.h"
 #include "feature/hs/hs_metrics.h"
+#include "feature/hs/hs_pow.h"
 #include "feature/hs/hs_service.h"
 #include "feature/hs/hs_stats.h"
 #include "feature/hs/hs_ob.h"
@@ -1514,6 +1515,10 @@ move_descriptors(hs_service_t *src, hs_service_t *dst)
     if (build_service_desc_superencrypted(dst, dst->desc_current) < 0) {
       goto err;
     }
+    log_err(
+        LD_REND,
+        "service_desc_schedule_upload called for desc_current, with seed: %s",
+        hex_str(dst->desc_current->desc->encrypted_data.pow_params->seed, 32));
     service_desc_schedule_upload(dst->desc_current, time(NULL), 1);
   }
   if (client_auth_changed && dst->desc_next) {
@@ -1523,6 +1528,10 @@ move_descriptors(hs_service_t *src, hs_service_t *dst)
     if (build_service_desc_superencrypted(dst, dst->desc_next) < 0) {
       goto err;
     }
+    log_err(
+        LD_REND,
+        "service_desc_schedule_upload called for desc_next, with seed: %s",
+        hex_str(dst->desc_current->desc->encrypted_data.pow_params->seed, 32));
     service_desc_schedule_upload(dst->desc_next, time(NULL), 1);
   }
 
@@ -1778,6 +1787,7 @@ build_service_desc_encrypted(hs_service_t *service,
   encrypted->intro_auth_types = NULL;
 
   /* HRPR: Setup PoW puzzle parameters from service's state */
+  /* HRPR TODO move? */
   hs_service_pow_state_t *pow_state = service->state.pow_state;
   encrypted->pow_params = tor_malloc_zero(sizeof(hs_desc_pow_params_t));
   if (service->config.has_pow_defenses_enabled) {
@@ -1993,64 +2003,79 @@ end:
 
 /** HRPR: Rotate the seeds used in the proof-of-work defenses. */
 static void
-rotate_pow_seeds(hs_service_t *service, hs_service_descriptor_t *desc, time_t now)
-{
-  /* Make life easier */
-  hs_service_pow_state_t *pow_state = service->state.pow_state;
-
-  if (now > pow_state->expiration_time) {
-    log_err(LD_REND,
-            "Seed expired. Rotating PoW seeds, generating new current seed.");
-
-    /* Keep track of the current seed that we are rotating. */
-    memcpy(pow_state->seed_previous, pow_state->seed_current, HS_POW_SEED_LEN);
-
-    /* Generate a new random seed to use from now on. */
-    crypto_rand((char *)pow_state->seed_current, HS_POW_SEED_LEN);
-
-    /* Update the descriptor with the new seed. */
-    memcpy(desc->desc->encrypted_data.pow_params->seed,
-           pow_state->seed_current, HS_POW_SEED_LEN);
-
-    log_err(LD_REND, "C_c: %s", hex_str(pow_state->seed_current, 32));
-
-    /* Update the expiration time for the new seed. */
-    pow_state->expiration_time =
-        (time(NULL) +
-         crypto_rand_int_range(HS_SERVICE_POW_SEED_ROTATE_TIME_MIN,
-                               HS_SERVICE_POW_SEED_ROTATE_TIME_MAX));
-    {
-      char fmt_next_time[ISO_TIME_LEN + 1];
-      format_local_iso_time(fmt_next_time, pow_state->expiration_time);
-      log_err(LD_REND, "PoW state expiration time set to: %s", fmt_next_time);
-    }
-
-    desc->desc->encrypted_data.pow_params->expiration_time =
-        pow_state->expiration_time;
-
-    log_err(LD_REND, "Current C: %s", hex_str(pow_state->seed_current, 32));
-    log_err(LD_REND, "Previous C: %s", hex_str(pow_state->seed_previous, 32));
-
-    /** Mark that we should use the updated descriptor HRPR TODO correct? */
-    service_desc_schedule_upload(desc, now, 1);
-  }
-}
-
-/** HRPR: Rotate the seeds used in the proof-of-work defenses. */
-static void
-rotate_all_pow_seeds(time_t now)
+rotate_pow_seeds(time_t now)
 {
   FOR_EACH_SERVICE_BEGIN(service)
   {
-    /* We'll try to update each descriptor that is if certain conditions apply
-     * in order for the descriptor to be updated. */
-    FOR_EACH_DESCRIPTOR_BEGIN(service, desc)
-    {
-      if (service->config.has_pow_defenses_enabled) {
-        rotate_pow_seeds(service, desc, now);
+    /* Make life easier */
+    hs_service_pow_state_t *pow_state = service->state.pow_state;
+
+    /* If the service has PoW defenses enabled and the current PoW seed has
+    expired then generate a new current seed, storing the old one in
+    seed_previous. */
+    if (service->config.has_pow_defenses_enabled &&
+        now > pow_state->expiration_time) {
+      log_err(LD_REND,
+              "Current seed expired. Scrubbing replay cache, rotating PoW "
+              "seeds, generating new seed and updating descriptors.");
+
+      log_err(LD_REND, "Current C: %s", hex_str(pow_state->seed_current, 32));
+
+      /* Before we overwrite the previous seed lets scrub entries corresponding
+      to it in the nonce replay cache. */
+      scrub_nonce_cache_for_seed(get_uint32(pow_state->seed_previous));
+
+      /* Keep track of the current seed that we are now rotating. */
+      memcpy(pow_state->seed_previous, pow_state->seed_current,
+             HS_POW_SEED_LEN);
+
+      /* Generate a new random seed to use from now on. Make sure the seed head
+       * is different to that of the previous seed. The following while loop
+       * will run at least once as the seeds will initially be equal. */
+      while (get_uint32(pow_state->seed_previous) ==
+             get_uint32(pow_state->seed_current)) {
+        log_err(LD_REND, "Seed heads match, generating new current seed.");
+        crypto_rand((char *)pow_state->seed_current, HS_POW_SEED_LEN);
       }
+
+      /* Update the expiration time for the new seed. */
+      pow_state->expiration_time =
+          (time(NULL) +
+           crypto_rand_int_range(HS_SERVICE_POW_SEED_ROTATE_TIME_MIN,
+                                 HS_SERVICE_POW_SEED_ROTATE_TIME_MAX));
+      {
+        char fmt_next_time[ISO_TIME_LEN + 1];
+        format_local_iso_time(fmt_next_time, pow_state->expiration_time);
+        log_err(LD_REND, "PoW state expiration time set to: %s",
+                fmt_next_time);
+      }
+
+      log_err(LD_REND, "New Current C: %s",
+              hex_str(pow_state->seed_current, 32));
+      log_err(LD_REND, "New Previous C: %s",
+              hex_str(pow_state->seed_previous, 32));
+
+      /* Update the descriptors to reflect the updated seeds. */
+      FOR_EACH_DESCRIPTOR_BEGIN(service, desc)
+      {
+        /* Update the descriptor with the new seed and expiration time. */
+        memcpy(desc->desc->encrypted_data.pow_params->seed,
+               pow_state->seed_current, HS_POW_SEED_LEN);
+
+        desc->desc->encrypted_data.pow_params->expiration_time =
+            pow_state->expiration_time;
+
+        /** Mark that we should use the updated descriptor. */
+        service_desc_schedule_upload(desc, now, 1);
+
+        {
+          int is_next_desc = (service->desc_next == desc);
+          log_err(LD_REND, "Updated seeds for %s descriptor.",
+                (is_next_desc) ? "current" : "next");
+        }
+      }
+      FOR_EACH_DESCRIPTOR_END;
     }
-    FOR_EACH_DESCRIPTOR_END;
   }
   FOR_EACH_SERVICE_END;
 }
@@ -2418,6 +2443,10 @@ update_service_descriptor_intro_points(hs_service_t *service,
       /* We'll build those introduction point into the descriptor once we have
        * confirmation that the circuits are opened and ready. However,
        * indicate that this descriptor should be uploaded from now on. */
+      log_err(LD_REND,
+              "service_desc_schedule_upload called in "
+              "update_..._intro_points. Seed: %s",
+              hex_str(desc->desc->encrypted_data.pow_params->seed, 32));
       service_desc_schedule_upload(desc, now, 1);
     }
     /* Were we able to pick all the intro points we needed? If not, we'll
@@ -2778,7 +2807,7 @@ run_build_descriptor_event(time_t now)
   update_all_descriptors_intro_points(now);
 
   /* HRPR: Check if we need to rotate the pow seeds for any services. */
-  rotate_all_pow_seeds(now);
+  rotate_pow_seeds(now);
 }
 
 /** For the given service, launch any intro point circuits that could be
@@ -3142,20 +3171,21 @@ upload_descriptor_to_all(const hs_service_t *service,
      * routerstatus_t found in the consensus else we have a problem. */
     tor_assert(hsdir_node);
     /* Upload this descriptor to the chosen directory. */
-    log_err(LD_REND, "Uploading descriptor to HSDir"); // HRPR
+    int is_next_desc = (service->desc_next == desc);
+
+    log_err(LD_REND, "Uploading %s descriptor to HSDir, seed: %s",
+            (is_next_desc) ? "current" : "next",
+            hex_str(desc->desc->encrypted_data.pow_params->seed, 32)); // HRPR
     upload_descriptor_to_hsdir(service, desc, hsdir_node);
   }
   SMARTLIST_FOREACH_END(hsdir_rs);
 
-  // HRPR I'm moving this to before we build/modify the descriptor so I can use
-  // it as the PoW params expiration time.
-
-  // /* Set the next upload time for this descriptor. Even if we are configured
-  //  * to not upload, we still want to follow the right cycle of life for this
-  //  * descriptor. */
-  // desc->next_upload_time =
-  //     (time(NULL) + crypto_rand_int_range(HS_SERVICE_NEXT_UPLOAD_TIME_MIN,
-  //                                         HS_SERVICE_NEXT_UPLOAD_TIME_MAX));
+  /* Set the next upload time for this descriptor. Even if we are configured
+   * to not upload, we still want to follow the right cycle of life for this
+   * descriptor. */
+  desc->next_upload_time =
+      (time(NULL) + crypto_rand_int_range(HS_SERVICE_NEXT_UPLOAD_TIME_MIN,
+                                          HS_SERVICE_NEXT_UPLOAD_TIME_MAX));
   {
     char fmt_next_time[ISO_TIME_LEN + 1];
     format_local_iso_time(fmt_next_time, desc->next_upload_time);
@@ -3367,6 +3397,7 @@ static void
 refresh_service_descriptor(const hs_service_t *service,
                            hs_service_descriptor_t *desc, time_t now)
 {
+  log_err(LD_REND, "refresh_service_descriptor...");
   /* There are few fields that we consider "mutable" in the descriptor meaning
    * we need to update them regularly over the lifetime for the descriptor.
    * The rest are set once and should not be modified.
@@ -3383,12 +3414,6 @@ refresh_service_descriptor(const hs_service_t *service,
   /* Build the intro points descriptor section. The refresh step is just
    * before we upload so all circuits have been properly established. */
   build_desc_intro_points(service, desc, now);
-
-  // /* HRPR TODO For now, but move to own function ig. Also this is diverging
-  // from the proposal */
-  // if (service->config.has_pow_defenses_enabled) {
-  //   rotate_pow_seeds(service, desc);
-  // }
 
   /* Set the desc revision counter right before uploading */
   set_descriptor_revision_counter(desc, now, service->desc_current == desc);
@@ -3431,13 +3456,6 @@ run_upload_descriptor_event(time_t now)
                digest256map_size(desc->intro_points.map),
                service->config.num_intro_points,
                (desc->missing_intro_points) ? " (couldn't pick more)" : "");
-
-      /* HRPR: Generate new upload time here, as we are using it for PoW
-      expiration. */
-      desc->next_upload_time =
-          (time(NULL) +
-           crypto_rand_int_range(HS_SERVICE_NEXT_UPLOAD_TIME_MIN,
-                                 HS_SERVICE_NEXT_UPLOAD_TIME_MAX));
 
       /* We are about to upload so we need to do one last step which is to
        * update the service's descriptor mutable fields in order to upload a
@@ -4435,16 +4453,16 @@ hs_service_new(const or_options_t *options)
     pow_state->suggested_effort = pow_state->min_effort;
 
     /* Generate the random seeds. We generate both as we don't want the
-    previous seed to be predictable even if it doesn't really exist yet. TODO
-    generate only current as rotate will be called? */
-    // HRPR TODO actually lets make them the same
+    previous seed to be predictable even if it doesn't really exist yet, and it
+    needs to be different to the current nonce for the replay cache scrubbing
+    to function correctly. */
     log_err(LD_REND, "Generating both PoW seeds...");
     crypto_rand((char *)&pow_state->seed_current, HS_POW_SEED_LEN);
-    // crypto_rand((char *)&pow_state->seed_previous, HS_POW_SEED_LEN);
+    crypto_rand((char *)&pow_state->seed_previous, HS_POW_SEED_LEN);
     memcpy(&pow_state->seed_previous, &pow_state->seed_current,
            HS_POW_SEED_LEN);
-    log_err(LD_REND, "C_c: %s", hex_str(pow_state->seed_current, 32));
-    log_err(LD_REND, "C_p: %s", hex_str(pow_state->seed_previous, 32));
+    log_err(LD_REND, "Current C: %s", hex_str(pow_state->seed_current, 32));
+    log_err(LD_REND, "Previous C: %s", hex_str(pow_state->seed_previous, 32));
 
     pow_state->expiration_time =
         (time(NULL) +
@@ -4493,6 +4511,7 @@ hs_service_free_(hs_service_t *service)
   /* HRPR: Free PoW rendezvous pqueue (if exists) */
   // TODO do we need to go through the list and free? or free when we pop?
   if (service->state.pow_state->rend_circuit_pqueue) {
+    log_err(LD_REND, "Freeing rend_circuit_pqueue");
     smartlist_free(service->state.pow_state->rend_circuit_pqueue);
   }
 

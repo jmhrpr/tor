@@ -11,10 +11,10 @@ typedef unsigned __int128 uint128_t;
 
 #include <stdio.h>
 #include "lib/crypt_ops/crypto_rand.h"
-#include "ext/equix/include/equix.h"
 #include "ext/libb2/src/blake2.h"
 #include "feature/hs/hs_descriptor.h"
 #include "feature/hs/hs_pow.h"
+#include "ext/ht.h"
 
 /** Length of random nonce (N) used in the PoW scheme. */
 #define HS_POW_NONCE_LEN 16
@@ -23,7 +23,63 @@ typedef unsigned __int128 uint128_t;
 /** Number of bytes needed to store an equix solution. */
 #define HS_POW_EQX_SOL_LEN 16
 
-/** Helper function to print an EquiX solution */
+/** Replay cache set up */
+/** Cache entry for (nonce, seed) replay protection. */
+typedef struct nonce_cache_entry_t {
+  HT_ENTRY(nonce_cache_entry_t) node;
+  uint128_t nonce;
+  uint32_t seed_head;
+} nonce_cache_entry_t;
+
+/** Return true if the two (nonce, seed) replay cache entries are the same */
+static inline int
+nonce_cache_entries_eq_(const struct nonce_cache_entry_t *entry1,
+                        const struct nonce_cache_entry_t *entry2)
+{
+  return entry1->nonce == entry2->nonce &&
+         entry1->seed_head == entry2->seed_head;
+}
+
+/** Hash function to hash the (nonce, seed) tuple entry */
+static inline unsigned
+nonce_cache_entry_hash_(const struct nonce_cache_entry_t *ent)
+{
+  return (unsigned)siphash24g(&ent->nonce, HS_POW_NONCE_LEN) + ent->seed_head;
+}
+
+static HT_HEAD(nonce_cache_table, nonce_cache_entry_t) nonce_cache_table;
+
+HT_PROTOTYPE(nonce_cache_table, nonce_cache_entry_t, node,
+             nonce_cache_entry_hash_, nonce_cache_entries_eq_);
+
+HT_GENERATE2(nonce_cache_table, nonce_cache_entry_t, node,
+             nonce_cache_entry_hash_, nonce_cache_entries_eq_, 0.6,
+             tor_reallocarray_, tor_free_);
+
+/** We use this to check if an entry in the replay cache is for a particular
+ * seed head, so we know to remove it once the seed is no longer in use. */
+int
+nonce_cache_entry_has_seed(nonce_cache_entry_t *ent, uint32_t seed_head)
+{
+  log_err(LD_REND,
+          "Checking if replay cache entry matches seed: does %#06x == %#06x?",
+          ent->seed_head, seed_head);
+  /* Returning nonzero makes HT_FOREACH_FN remove the element from the HT */
+  return ent->seed_head == seed_head;
+}
+
+void
+scrub_nonce_cache_for_seed(uint32_t seed_head)
+{
+  log_err(LD_REND, "Replay cache HT length before scrub: %u",
+          HT_SIZE(&nonce_cache_table));
+  HT_FOREACH_FN(nonce_cache_table, &nonce_cache_table,
+                nonce_cache_entry_has_seed, seed_head);
+  log_err(LD_REND, "Replay cache HT length after scrub: %u",
+          HT_SIZE(&nonce_cache_table));
+}
+
+/** Temp helper function to print an EquiX solution. */
 static void
 print_solution(const equix_solution *sol)
 {
@@ -72,7 +128,7 @@ solve_pow(hs_desc_pow_params_t *pow_params,
   memset(hex_nonce, 0, HS_POW_NONCE_LEN * 2 + 1);
   base16_encode(hex_nonce, HS_POW_NONCE_LEN * 2 + 1, &nonce, HS_POW_NONCE_LEN);
   log_err(LD_REND, "N: %s", hex_nonce);
-  log_err(LD_REND, "E: %u | Hex: %s)", effort, hex_str(&effort, 4));
+  log_err(LD_REND, "E: %u | Hex: %s", effort, hex_str(&effort, 4));
 
   /* Initialise EquiX and blake2b. */
   uint8_t success = 0;
@@ -105,7 +161,7 @@ solve_pow(hs_desc_pow_params_t *pow_params,
     }
 
     /* Calculate R = blake2b(C || N || E || S) */
-    /* HRPR TODO: Does endianness of S matter? */
+    /* HRPR TODO: Do we need to ensure endianness of S? */
 
     // HRPR TODO check this is behaving correctly (i.e. concat above correct)
     if (blake2b_init(S, HS_POW_HASH_LEN) < 0)
@@ -115,8 +171,7 @@ solve_pow(hs_desc_pow_params_t *pow_params,
     blake2b_final(S, hash_result, HS_POW_HASH_LEN);
 
     /* Check if R * E <= UINT32_MAX, succeed if so. */
-    uint32_t hash_result_netorder =
-        tor_htonl(get_uint32(hash_result)); // TODO
+    uint32_t hash_result_netorder = tor_htonl(get_uint32(hash_result)); // TODO
     if ((uint64_t)hash_result_netorder * effort <= UINT32_MAX) {
       success = 1;
 
@@ -139,8 +194,8 @@ solve_pow(hs_desc_pow_params_t *pow_params,
       equix_free(ctx);
       ret = 0;
     } else {
-      /* Did not pass the R * E <= UINT32_MAX check. Increment the nonce and try
-      again. */
+      /* Did not pass the R * E <= UINT32_MAX check. Increment the nonce and
+      try again. */
       nonce++;
       count++;
       memcpy(challenge + sizeof(pow_params->seed), &nonce, HS_POW_NONCE_LEN);
@@ -156,6 +211,8 @@ solve_pow(hs_desc_pow_params_t *pow_params,
 int
 verify_pow(hs_service_pow_state_t *pow_state, hs_pow_solution_t *pow_solution)
 {
+  nonce_cache_entry_t search;
+  nonce_cache_entry_t *found;
   int ret = -1;
   uint8_t *seed;
 
@@ -180,6 +237,16 @@ verify_pow(hs_service_pow_state_t *pow_state, hs_pow_solution_t *pow_solution)
   }
 
   /* HRPR TODO Fail if N = POW_NONCE is present in the replay cache. */
+  search.nonce = pow_solution->nonce;
+  search.seed_head = pow_solution->seed_head;
+  found = HT_FIND(nonce_cache_table, &nonce_cache_table, &search);
+  if (found) {
+    log_err(LD_REND, "Found (nonce, seed) tuple in the replay cache.");
+    goto done;
+  } else {
+    log_err(LD_REND,
+            "The (nonce, seed) tuple was not already in the replay cache.");
+  }
 
   /* Build EquiX challenge (C || N || INT_32(E)) */
   size_t offset = 0;
@@ -228,6 +295,13 @@ verify_pow(hs_service_pow_state_t *pow_state, hs_pow_solution_t *pow_solution)
 
   /* PoW verified successfully. */
   ret = 0;
+
+  /* Add the (nonce, seed) tuple to the replay cache HRPR TODO move? */
+  log_err(LD_REND, "Adding (nonce, seed) tuple to the replay cache.");
+  found = tor_malloc_zero(sizeof(nonce_cache_entry_t));
+  found->nonce = pow_solution->nonce;
+  found->seed_head = pow_solution->seed_head;
+  HT_INSERT(nonce_cache_table, &nonce_cache_table, found);
 
 done:
   return ret;

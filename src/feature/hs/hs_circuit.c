@@ -1056,9 +1056,8 @@ hs_circ_handle_introduce2(const hs_service_t *service,
     goto done;
   }
 
-  /* HRPR TODO We need to pull out the PoW solution (or just effort) if we want
-   * to use it for prio queue, instead of instantly launching rend circuit
-   * below. (It's now in data). */
+  /* HRPR PoW solution, if present, is stored in data so we can use it for
+   * the prio queue. TODO we could just bring out the effort? */
   if (hs_cell_parse_introduce2(&data, circ, service) < 0) {
     goto done;
   }
