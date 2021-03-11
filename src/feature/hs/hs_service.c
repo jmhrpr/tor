@@ -4459,8 +4459,7 @@ hs_service_new(const or_options_t *options)
     log_err(LD_REND, "Generating both PoW seeds...");
     crypto_rand((char *)&pow_state->seed_current, HS_POW_SEED_LEN);
     crypto_rand((char *)&pow_state->seed_previous, HS_POW_SEED_LEN);
-    memcpy(&pow_state->seed_previous, &pow_state->seed_current,
-           HS_POW_SEED_LEN);
+
     log_err(LD_REND, "Current C: %s", hex_str(pow_state->seed_current, 32));
     log_err(LD_REND, "Previous C: %s", hex_str(pow_state->seed_previous, 32));
 
