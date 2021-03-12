@@ -191,8 +191,7 @@ flag_all_conn_wait_desc(const ed25519_public_key_t *service_identity_pk)
                           service_identity_pk)) {
       connection_ap_mark_as_waiting_for_renddesc(TO_ENTRY_CONN(conn));
     }
-  }
-  SMARTLIST_FOREACH_END(conn);
+  } SMARTLIST_FOREACH_END(conn);
 
   smartlist_free(conns);
 }
@@ -668,7 +667,7 @@ send_introduce1(origin_circuit_t *intro_circ, origin_circuit_t *rend_circ)
     cached version, so we should refetch and try again. */
     if (time(NULL) > desc->encrypted_data.pow_params->expiration_time) {
       log_err(LD_REND,
-              "PoW params in the descriptor have expired, need to refetch...");
+              "PoW params in the descriptor have expired, transient error.");
       goto tran_err;
     }
 
@@ -1368,9 +1367,19 @@ can_client_refetch_desc(const ed25519_public_key_t *identity_pk,
   /* Check if fetching a desc for this HS is useful to us right now */
   {
     const hs_descriptor_t *cached_desc = NULL;
+    int descriptor_is_usable = 0;
     cached_desc = hs_cache_lookup_as_client(identity_pk);
-    if (cached_desc &&
-        hs_client_any_intro_points_usable(identity_pk, cached_desc)) {
+    if (cached_desc) {
+      descriptor_is_usable =
+          hs_client_any_intro_points_usable(identity_pk, cached_desc);
+      /* HRPR Check if PoW params have expired, should they be present */
+      if (cached_desc->encrypted_data.pow_params_present &&
+          cached_desc->encrypted_data.pow_params->expiration_time <
+              time(NULL)) {
+        descriptor_is_usable = 0;
+      }
+    }
+    if (descriptor_is_usable) {
       log_info(LD_GENERAL, "We would fetch a v3 hidden service descriptor "
                            "but we already have a usable descriptor.");
       status = HS_CLIENT_FETCH_HAVE_DESC;

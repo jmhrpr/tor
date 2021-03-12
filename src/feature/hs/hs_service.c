@@ -929,8 +929,10 @@ move_hs_state(hs_service_t *src_service, hs_service_t *dst_service)
     src->ob_subcreds = NULL; /* steal pointer reference */
   }
 
-  /* HRPR */
-  dst->pow_state = src->pow_state;
+  /* HRPR TODO What if we are enabling/disabling dynamically? */
+  if (src_service->config.has_pow_defenses_enabled) {
+    dst->pow_state = src->pow_state;
+  }
 }
 
 /** Register services that are in the staging list. Once this function returns,
