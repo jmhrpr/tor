@@ -611,6 +611,7 @@ send_introduce1(origin_circuit_t *intro_circ, origin_circuit_t *rend_circ)
   char onion_address[HS_SERVICE_ADDR_LEN_BASE32 + 1];
   const ed25519_public_key_t *service_identity_pk = NULL;
   const hs_desc_intro_point_t *ip;
+  hs_pow_solution_t *pow_solution;
 
   tor_assert(rend_circ);
   if (intro_circ_is_ok(intro_circ) < 0) {
@@ -657,12 +658,10 @@ send_introduce1(origin_circuit_t *intro_circ, origin_circuit_t *rend_circ)
   }
 
   /* HRPR: If the descriptor contains PoW parameters then the service is
-   * expecting a PoW solution in the INTRODUCE cell, which we calculate here.
-   */
-  hs_pow_solution_t *pow_solution = tor_malloc_zero(sizeof(hs_pow_solution_t));
+   * expecting a PoW solution in the INTRODUCE cell, which we solve here. */
   if (desc->encrypted_data.pow_params_present) {
+    pow_solution = tor_malloc_zero(sizeof(hs_pow_solution_t));
     log_err(LD_REND, "PoW params present in descriptor.");
-
     /* If the PoW params in the descriptor have expired then maybe we have a
     cached version, so we should refetch and try again. */
     if (time(NULL) > desc->encrypted_data.pow_params->expiration_time) {
@@ -675,6 +674,11 @@ send_introduce1(origin_circuit_t *intro_circ, origin_circuit_t *rend_circ)
       log_err(LD_REND, "PoW solve returned non zero.");
       goto tran_err;
     }
+
+    /* Set flag to reflect that the HS we are attempting to rendezvous has PoW
+     * defenses enabled, and as such we will need to be more lenient with
+     * timing out while waiting for the circuit to be built. */
+    rend_circ->hs_with_pow_circ = 1;
 
   } else {
     log_err(LD_REND, "PoW params not present in descriptor.");
@@ -1452,6 +1456,7 @@ client_desc_has_arrived(const smartlist_t *entry_conns)
     edge_connection_t *edge_conn = ENTRY_TO_EDGE_CONN(entry_conn);
     const ed25519_public_key_t *identity_pk =
         &edge_conn->hs_ident->identity_pk;
+    int descriptor_is_usable = 1;
 
     /* We were just called because we stored the descriptor for this service
      * so not finding a descriptor means we have a bigger problem. */
@@ -1460,7 +1465,24 @@ client_desc_has_arrived(const smartlist_t *entry_conns)
       goto end;
     }
 
-    if (!hs_client_any_intro_points_usable(identity_pk, desc)) {
+    /* HRPR TODO Clean below up into a function like intro_points_usable? */
+    if (desc->encrypted_data.pow_params_present) {
+      if (desc->encrypted_data.pow_params->expiration_time <
+          time(NULL)) {
+        log_err(LD_REND,
+                "PoW params in descriptor has expired.");
+        descriptor_is_usable = 0;
+      } else {
+        /* Note the connection is dealing with a HS with PoW defenses. */
+        log_err(LD_REND, "Marking connection as dealing with PoW...");
+        entry_conn->hs_with_pow_conn = 1;
+      }
+    }
+
+    if (!hs_client_any_intro_points_usable(identity_pk, desc))
+      descriptor_is_usable = 0;
+
+    if (!descriptor_is_usable) {
       log_info(LD_REND, "Hidden service descriptor is unusable. "
                         "Closing streams.");
       /* Report the extended socks error code that we were unable to introduce

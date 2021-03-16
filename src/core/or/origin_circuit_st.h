@@ -206,6 +206,12 @@ struct origin_circuit_t {
    * service-side introduction circuits never have this flag set.) */
   unsigned int hs_circ_has_timed_out : 1;
 
+  /** HRPR Set iff this is a hidden-service circuit for a HS with PoW defenses
+   * enabled, so that we know to be more lenient with timing out the
+   * circuit-build to allow the service time to work through the queue of
+   * requests. */
+  unsigned int hs_with_pow_circ : 1;
+
   /** Set iff this circuit has been given a relaxed timeout because
    * no circuits have opened. Used to prevent spamming logs. */
   unsigned int relaxed_timeout : 1;

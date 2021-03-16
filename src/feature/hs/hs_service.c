@@ -262,6 +262,41 @@ set_service_default_config(hs_service_config_t *c, const or_options_t *options)
   c->has_pow_defenses_enabled = 1;
 }
 
+/** HRPR Initialise PoW defenses */
+static void
+initialise_pow_defenses(hs_service_t *service) {
+  log_err(LD_REND, "PoW defenses enabled.");
+  service->state.pow_state = tor_malloc_zero(sizeof(hs_service_pow_state_t));
+  hs_service_pow_state_t *pow_state = service->state.pow_state;
+  pow_state->rend_circuit_pqueue = smartlist_new();
+  pow_state->pop_pqueue_ev = NULL;
+  pow_state->min_effort = 100; // HRPR TODO Hardcoded for now
+  pow_state->suggested_effort = pow_state->min_effort;
+
+  /* Generate the random seeds. We generate both as we don't want the
+  previous seed to be predictable even if it doesn't really exist yet, and it
+  needs to be different to the current nonce for the replay cache scrubbing
+  to function correctly. */
+  log_err(LD_REND, "Generating both PoW seeds...");
+  crypto_rand((char *)&pow_state->seed_current, HS_POW_SEED_LEN);
+  crypto_rand((char *)&pow_state->seed_previous, HS_POW_SEED_LEN);
+
+  log_err(LD_REND, "Current C: %s", hex_str(pow_state->seed_current, 32));
+  log_err(LD_REND, "Previous C: %s", hex_str(pow_state->seed_previous, 32));
+
+  pow_state->expiration_time =
+      (time(NULL) +
+       crypto_rand_int_range(HS_SERVICE_POW_SEED_ROTATE_TIME_MIN,
+                             HS_SERVICE_POW_SEED_ROTATE_TIME_MAX));
+
+  /* Temporary testing with known seeds
+  char *seed1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
+  char *seed2 = "ZBCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
+  memcpy(pow_state->seed_current, seed1, 32);
+  memcpy(pow_state->seed_previous, seed2, 32);
+  */
+}
+
 /** From a service configuration object config, clear everything from it
  * meaning free allocated pointers and reset the values. */
 STATIC void
@@ -4444,37 +4479,9 @@ hs_service_new(const or_options_t *options)
   service->state.replay_cache_rend_cookie =
       replaycache_new(REND_REPLAY_TIME_INTERVAL, REND_REPLAY_TIME_INTERVAL);
 
-  // HRPR TODO I think move this?
-  if (service->config.has_pow_defenses_enabled) {
-    log_err(LD_REND, "PoW defenses enabled.");
-    service->state.pow_state = tor_malloc_zero(sizeof(hs_service_pow_state_t));
-    hs_service_pow_state_t *pow_state = service->state.pow_state;
-    pow_state->rend_circuit_pqueue = smartlist_new();
-    pow_state->pop_pqueue_ev = NULL;
-    pow_state->min_effort = 100; // HRPR TODO Hardcoded for now
-    pow_state->suggested_effort = pow_state->min_effort;
-
-    /* Generate the random seeds. We generate both as we don't want the
-    previous seed to be predictable even if it doesn't really exist yet, and it
-    needs to be different to the current nonce for the replay cache scrubbing
-    to function correctly. */
-    log_err(LD_REND, "Generating both PoW seeds...");
-    crypto_rand((char *)&pow_state->seed_current, HS_POW_SEED_LEN);
-    crypto_rand((char *)&pow_state->seed_previous, HS_POW_SEED_LEN);
-
-    log_err(LD_REND, "Current C: %s", hex_str(pow_state->seed_current, 32));
-    log_err(LD_REND, "Previous C: %s", hex_str(pow_state->seed_previous, 32));
-
-    pow_state->expiration_time =
-        (time(NULL) +
-         crypto_rand_int_range(HS_SERVICE_POW_SEED_ROTATE_TIME_MIN,
-                               HS_SERVICE_POW_SEED_ROTATE_TIME_MAX));
-
-    // char *seed1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
-    // char *seed2 = "ZBCDEFGHIJKLMNOPQRSTUVWXYZabcdef";
-    // memcpy(pow_state->seed_current, seed1, 32);
-    // memcpy(pow_state->seed_previous, seed2, 32);
-  }
+  /* HRPR TODO I think move this? Initialise the PoW defenses if enabled. */
+  if (service->config.has_pow_defenses_enabled)
+    initialise_pow_defenses(service);
 
   return service;
 }

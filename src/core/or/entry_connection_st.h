@@ -91,6 +91,10 @@ struct entry_connection_t {
    * NATd connection */
   unsigned int is_transparent_ap:1;
 
+  /** HRPR True iff this is a connection to a HS that has PoW defenses enabled,
+   * so we know not to apply the usual SOCKS timeout. */
+  unsigned int hs_with_pow_conn : 1;
+
   /** For AP connections only: Set if this connection's target exit node
    * allows optimistic data (that is, data sent on this stream before
    * the exit has sent a CONNECTED cell) and we have chosen to use it.

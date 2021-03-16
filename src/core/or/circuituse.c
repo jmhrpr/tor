@@ -462,9 +462,9 @@ circuit_expire_building(void)
   /* circ_times.timeout_ms and circ_times.close_ms are from
    * circuit_build_times_get_initial_timeout() if we haven't computed
    * custom timeouts yet */
-  struct timeval general_cutoff, begindir_cutoff, fourhop_cutoff,
-    close_cutoff, extremely_old_cutoff, hs_extremely_old_cutoff,
-    cannibalized_cutoff, c_intro_cutoff, s_intro_cutoff, stream_cutoff;
+  struct timeval general_cutoff, begindir_cutoff, fourhop_cutoff, close_cutoff,
+      extremely_old_cutoff, hs_extremely_old_cutoff, cannibalized_cutoff,
+      c_intro_cutoff, s_intro_cutoff, stream_cutoff, c_rend_pow_cutoff;
   const or_options_t *options = get_options();
   struct timeval now;
   cpath_build_state_t *build_state;
@@ -544,6 +544,10 @@ circuit_expire_building(void)
   /* Server intro circs have an extra round trip */
   SET_CUTOFF(s_intro_cutoff, get_circuit_build_timeout_ms() * (9/6.0) + 1000);
 
+  /* HRPR TODO: Timeout to wait for service with PoW defenses to pull our
+   * request from the pqueue and launch rendezvous circuit. 5m for now... */
+  SET_CUTOFF(c_rend_pow_cutoff, 5 * 60 * 1000);
+
   SET_CUTOFF(close_cutoff, get_circuit_build_close_time_ms());
   SET_CUTOFF(extremely_old_cutoff, get_circuit_build_close_time_ms()*2 + 1000);
 
@@ -583,6 +587,11 @@ circuit_expire_building(void)
       cutoff = s_intro_cutoff;
     else if (victim->purpose == CIRCUIT_PURPOSE_C_ESTABLISH_REND)
       cutoff = stream_cutoff;
+    /* HRPR Be more lenient on waiting for the service to rendezvous if it has
+     * PoW defenses enabled, as  */
+    else if (victim->purpose == CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED &&
+             TO_ORIGIN_CIRCUIT(victim)->hs_with_pow_circ)
+      cutoff = c_rend_pow_cutoff;
     else if (victim->purpose == CIRCUIT_PURPOSE_PATH_BIAS_TESTING)
       cutoff = close_cutoff;
     else if (TO_ORIGIN_CIRCUIT(victim)->has_opened &&
@@ -788,12 +797,14 @@ circuit_expire_building(void)
       case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
       case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
         /* If we have reached this line, we want to spare the circ for now. */
-        log_info(LD_CIRC,"Marking circ %u (state %d:%s, purpose %d) "
-                 "as timed-out HS circ HRPR TODO testing no time out",
-                 (unsigned)victim->n_circ_id,
-                 victim->state, circuit_state_to_string(victim->state),
-                 victim->purpose);
-        // TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out = 1;
+        log_info(LD_CIRC,
+                 "Marking circ %u (state %d:%s, purpose %d) "
+                 "as timed-out HS%s circ",
+                 (unsigned)victim->n_circ_id, victim->state,
+                 circuit_state_to_string(victim->state), victim->purpose,
+                 TO_ORIGIN_CIRCUIT(victim)->hs_with_pow_circ ? " (with PoW)"
+                                                             : "");
+        TO_ORIGIN_CIRCUIT(victim)->hs_circ_has_timed_out = 1;
         continue;
       default:
         break;
@@ -2864,8 +2875,10 @@ connection_ap_handshake_attach_circuit(entry_connection_t *conn)
 
   conn_age = (int)(time(NULL) - base_conn->timestamp_created);
 
-  /* Is this connection so old that we should give up on it? */
-  if (conn_age >= get_options()->SocksTimeout) {
+  /* Is this connection so old that we should give up on it? HRPR Don't timeout
+   * if it is a connection to a HS with PoW defenses enabled, as they will take
+   * longer to successfully launch and be serviced. */
+  if (conn_age >= get_options()->SocksTimeout && !conn->hs_with_pow_conn) {
     int severity = (tor_addr_is_null(&base_conn->addr) && !base_conn->port) ?
       LOG_INFO : LOG_NOTICE;
     log_fn(severity, LD_APP,

@@ -36,7 +36,7 @@
 /** Maximum interval for uploading next descriptor (in seconds). */
 #define HS_SERVICE_NEXT_UPLOAD_TIME_MAX (120 * 60)
 
-/** HRPR: PoW seed expiration time should be set to RAND_TIME(now+7200, 900)
+/** HRPR: PoW seed expiration time is set to RAND_TIME(now+7200, 900)
  * seconds. */
 #define HS_SERVICE_POW_SEED_ROTATE_TIME_MIN (7200 - 900)
 #define HS_SERVICE_POW_SEED_ROTATE_TIME_MAX (7200)

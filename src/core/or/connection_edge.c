@@ -1161,7 +1161,10 @@ connection_ap_expire_beginning(void)
      * it here too because controllers that put streams in controller_wait
      * state never ask Tor to attach the circuit. */
     if (AP_CONN_STATE_IS_UNATTACHED(base_conn->state)) {
-      if (seconds_since_born >= options->SocksTimeout) {
+      /* HRPR If this is a connection to a HS with PoW defenses enabled we
+       * want to wait for longer than the usual SOCKS timeout. */
+      if (seconds_since_born >= options->SocksTimeout &&
+          !entry_conn->hs_with_pow_conn) {
         log_fn(severity, LD_APP,
             "Tried for %d seconds to get a connection to %s:%d. "
             "Giving up. (%s)",
@@ -2064,12 +2067,19 @@ connection_ap_handle_onion(entry_connection_t *conn,
       descriptor_is_usable =
         hs_client_any_intro_points_usable(&hs_conn_ident->identity_pk,
                                           cached_desc);
-      if (cached_desc->encrypted_data.pow_params_present &&
-          cached_desc->encrypted_data.pow_params->expiration_time <
-              time(NULL)) {
-        log_err(LD_REND,
-                "PoW params in cached descriptor has expired, refetching...");
-        descriptor_is_usable = 0;
+      /* HRPR TODO Cleanup. Check if PoW parameters have expired, should they
+       * exist. */
+      if (cached_desc->encrypted_data.pow_params_present) {
+        if (cached_desc->encrypted_data.pow_params->expiration_time <
+            time(NULL)) {
+          log_err(LD_REND,
+              "PoW params in cached descriptor has expired, refetching...");
+          descriptor_is_usable = 0;
+        } else {
+          /* Note the connection is dealing with a HS with PoW defenses. */
+          log_err(LD_REND, "Marking connection as dealing with PoW...");
+          conn->hs_with_pow_conn = 1;
+        }
       }
       log_info(LD_GENERAL, "Found %s descriptor in cache for %s. %s.",
                (descriptor_is_usable) ? "usable" : "unusable",
@@ -2149,7 +2159,6 @@ connection_ap_handle_onion(entry_connection_t *conn,
   /* We have the descriptor!  So launch a connection to the HS. */
   log_info(LD_REND, "Descriptor is here. Great.");
 
-  log_err(LD_REND, "Setting base_conn->state = CIRCUIT_WAIT");
   base_conn->state = AP_CONN_STATE_CIRCUIT_WAIT;
   /* We'll try to attach it at the next event loop, or whenever
    * we call connection_ap_attach_pending() */
