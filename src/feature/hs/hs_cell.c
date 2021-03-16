@@ -924,6 +924,7 @@ handle_introduce2_encrypted_cell_extensions(
 
   extensions = trn_cell_introduce_encrypted_getconst_extensions(enc_cell);
   if (extensions == NULL) {
+    log_err(LD_REND, "No extensions found in INTRODUCE2 cell.");
     goto end;
   }
 
@@ -952,6 +953,7 @@ handle_introduce2_encrypted_cell_extensions(
       // log_err(LD_REND, "test pow_sol nonce");
       // log_err(LD_REND, "PARSED N: %s", hex_str(&pow_sol->nonce, 16));
       data->pow_effort = pow_sol->effort;
+      ret = 0;
       break;
     default:
       /* Unknown extension. Skip over. */
@@ -959,7 +961,6 @@ handle_introduce2_encrypted_cell_extensions(
     }
   }
 
-  ret = 0;
 end:
   return ret;
 }
