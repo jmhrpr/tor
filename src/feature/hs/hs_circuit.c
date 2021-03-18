@@ -1089,8 +1089,12 @@ hs_circ_handle_introduce2(const hs_service_t *service,
     // HRPR TODO Come back to this bodged fix and think about it more.
     memcpy(data_copy, &data, sizeof(hs_cell_introduce2_data_t));
     enqueue_rend_circuit(service, ip, data_copy, data_copy->pow_effort);
-    /* Successfully added rend circuit to priority queue */
+
+    /* Successfully added rend circuit to priority queue. */
     ret = 0;
+
+    /* Increase the total effort in valid requests received this period. */
+    service->state.pow_state->total_effort += data_copy->pow_effort;
 
     return ret;
   } else {

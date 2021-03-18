@@ -271,9 +271,8 @@ typedef struct hs_service_config_t {
 
   /** HRPR: PoW defense against DoS. For the INTRODUCE2 cell extension. */
   unsigned int has_pow_defenses_enabled : 1;
-  // TODO parameters here? Can stop sideloading params and hardcode here, or
-  // pull from some config file. Should this be in state, or somehow both?
-  // This should probably be in state.
+  uint32_t pow_min_effort;
+  uint32_t pow_svc_bottom_capacity;
 
   /** If set, contains the Onion Balance master ed25519 public key (taken from
    * an .onion addresses) that this tor instance serves as backend. */

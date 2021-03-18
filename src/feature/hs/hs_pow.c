@@ -188,6 +188,7 @@ solve_pow(hs_desc_pow_params_t *pow_params,
       /* Store the information required in a solution */
       pow_solution_out->nonce = nonce;
       pow_solution_out->effort = effort;
+      /* We only store the first 4 bytes of the seed */
       pow_solution_out->seed_head = get_uint32(pow_params->seed);
       pow_solution_out->equix_solution = solution[0];
 
