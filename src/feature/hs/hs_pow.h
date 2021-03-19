@@ -19,7 +19,7 @@ typedef unsigned __int128 uint128_t;
 
 #define HS_POW_SUGGESTED_EFFORT_DEFAULT 100 // HRPR TODO 5000
 /* Service updates the suggested effort every HS_UPDATE_PERIOD seconds. */
-#define HS_UPDATE_PERIOD 60
+#define HS_UPDATE_PERIOD 300 // HRPR TODO Should be consensus
 
 /** HRPR State and parameters of PoW defenses, stored in the service state. */
 typedef struct hs_service_pow_state_t {

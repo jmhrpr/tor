@@ -2160,6 +2160,8 @@ update_suggested_effort(hs_service_t *service)
    * changes by less than 15 percent. */
   if (pow_state->suggested_effort <= previous_effort * 0.85 ||
       previous_effort * 1.15 <= pow_state->suggested_effort) {
+    log_err(LD_REND,
+            "Suggested effort changed significantly, updating descriptors...");
     FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
       desc->desc->encrypted_data.pow_params->suggested_effort =
           pow_state->suggested_effort;
@@ -2172,6 +2174,8 @@ update_suggested_effort(hs_service_t *service)
 
   /* The change in suggested effort was not significant enough to warrant
   updating the descriptors, return 0 to reflect they are unchanged. */
+  log_err(LD_REND,
+          "Change in suggested effort didn't warrant updating descriptors.");
   return 0;
 }
 
@@ -2574,10 +2578,6 @@ update_service_descriptor_intro_points(hs_service_t *service,
       /* We'll build those introduction point into the descriptor once we have
        * confirmation that the circuits are opened and ready. However,
        * indicate that this descriptor should be uploaded from now on. */
-      log_err(LD_REND,
-              "service_desc_schedule_upload called in "
-              "update_..._intro_points. Seed: %s",
-              hex_str(desc->desc->encrypted_data.pow_params->seed, 32));
       service_desc_schedule_upload(desc, now, 1);
     }
     /* Were we able to pick all the intro points we needed? If not, we'll
