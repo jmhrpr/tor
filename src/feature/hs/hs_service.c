@@ -310,22 +310,6 @@ initialize_pow_defenses(hs_service_t *service) {
   memcpy(pow_state->seed_previous, seed2, 32);
   */
 
-    // /* Initialise descriptors. */
-    // hs_desc_encrypted_data_t *encrypted;
-    // FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
-    //   encrypted = &desc->desc->encrypted_data;
-    //   encrypted->pow_params = tor_malloc_zero(sizeof(hs_desc_pow_params_t));
-
-    //   encrypted->pow_params_present = 1;
-    //   encrypted->pow_params->type = "v1"; // HRPR TODO Only type for now
-    //   memcpy(encrypted->pow_params->seed, &pow_state->seed_current,
-    //           HS_POW_SEED_LEN);
-    //   encrypted->pow_params->suggested_effort = pow_state->suggested_effort;
-    //   encrypted->pow_params->expiration_time = pow_state->expiration_time;
-
-    //   service_desc_schedule_upload(desc, time(NULL), 1);
-    // } FOR_EACH_DESCRIPTOR_END;
-
   service->state.pow_defenses_initialized = 1;
 }
 
