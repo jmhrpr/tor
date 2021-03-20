@@ -259,16 +259,16 @@ set_service_default_config(hs_service_config_t *c, const or_options_t *options)
   c->intro_dos_rate_per_sec = HS_CONFIG_V3_DOS_DEFENSE_RATE_PER_SEC_DEFAULT;
   c->intro_dos_burst_per_sec = HS_CONFIG_V3_DOS_DEFENSE_BURST_PER_SEC_DEFAULT;
   /* HRPR */
-  c->has_pow_defenses_enabled = 1; // HRPR TODO
+  c->has_pow_defenses_enabled = HS_CONFIG_V3_POW_DEFENSES_DEFAULT;
   c->pow_min_effort = HS_CONFIG_V3_POW_DEFENSES_MIN_EFFORT_DEFAULT;
   c->pow_svc_bottom_capacity =
       HS_CONFIG_V3_POW_DEFENSES_SVC_BOTTOM_CAPACITY_DEFAULT;
 }
 
-/** HRPR Initialise PoW defenses */
+/** HRPR: Initialize PoW defenses */
 static void
-initialise_pow_defenses(hs_service_t *service) {
-  log_err(LD_REND, "PoW defenses enabled, initialising...");
+initialize_pow_defenses(hs_service_t *service) {
+  log_err(LD_REND, "PoW defenses enabled, initializing...");
 
   service->state.pow_state = tor_malloc_zero(sizeof(hs_service_pow_state_t));
 
@@ -309,6 +309,38 @@ initialise_pow_defenses(hs_service_t *service) {
   memcpy(pow_state->seed_current, seed1, 32);
   memcpy(pow_state->seed_previous, seed2, 32);
   */
+
+  /* Initialise descriptors. */
+  hs_desc_encrypted_data_t *encrypted;
+  FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
+    encrypted = &desc->desc->encrypted_data;
+    encrypted->pow_params = tor_malloc_zero(sizeof(hs_desc_pow_params_t));
+
+    encrypted->pow_params_present = 1;
+    encrypted->pow_params->type = "v1"; // HRPR TODO Only type for now
+    memcpy(encrypted->pow_params->seed, &pow_state->seed_current,
+            HS_POW_SEED_LEN);
+    encrypted->pow_params->suggested_effort = pow_state->suggested_effort;
+    encrypted->pow_params->expiration_time = pow_state->expiration_time;
+
+    service_desc_schedule_upload(desc, time(NULL), 1);
+  } FOR_EACH_DESCRIPTOR_END;
+
+  service->state.pow_defenses_initialized = 1;
+}
+
+/** HRPR: Clear the state for the PoW defenses. */
+static void
+free_pow_state(hs_service_t *service)
+{
+  log_err(LD_REND, "Freeing rend_circuit_pqueue...");
+  smartlist_free(service->state.pow_state->rend_circuit_pqueue);
+
+  log_err(LD_REND, "Freeing pop_pqueue_ev mainloop event...");
+  mainloop_event_free(service->state.pow_state->pop_pqueue_ev);
+
+  log_err(LD_REND, "Freeing service pow_state...");
+  tor_free(service->state.pow_state);
 }
 
 /** From a service configuration object config, clear everything from it
@@ -1837,20 +1869,6 @@ build_service_desc_encrypted(hs_service_t *service,
   /* XXX: Support client authorization (#20700). */
   encrypted->intro_auth_types = NULL;
 
-  /* HRPR: Setup PoW puzzle parameters from service's state */
-  /* HRPR TODO move? */
-  hs_service_pow_state_t *pow_state = service->state.pow_state;
-  encrypted->pow_params = tor_malloc_zero(sizeof(hs_desc_pow_params_t));
-  if (service->config.has_pow_defenses_enabled) {
-    encrypted->pow_params_present = 1;
-    encrypted->pow_params->type = "v1"; // HRPR TODO Only type for now
-    memcpy(encrypted->pow_params->seed, &pow_state->seed_current,
-           HS_POW_SEED_LEN);
-    encrypted->pow_params->suggested_effort = pow_state->suggested_effort;
-    encrypted->pow_params->expiration_time = pow_state->expiration_time;
-  } else {
-    encrypted->pow_params_present = 0;
-  }
   return 0;
 }
 
@@ -2888,8 +2906,7 @@ run_housekeeping_event(time_t now)
   /* Note that nothing here opens circuit(s) nor uploads descriptor(s). We are
    * simply moving things around or removing unneeded elements. */
 
-  FOR_EACH_SERVICE_BEGIN(service)
-  {
+  FOR_EACH_SERVICE_BEGIN(service) {
     /* If the service is starting off, set the rotation time. We can't do that
      * at configure time because the get_options() needs to be set for setting
      * that time that uses the voting interval. */
@@ -2898,6 +2915,13 @@ run_housekeeping_event(time_t now)
        * 23:47:00, the next rotation time is when the next SRV is computed
        * which is at Oct 26th 00:00:00 that is in 13 minutes. */
       set_rotation_time(service);
+    }
+
+    /* HRPR If the service is starting off or just been reset (?) and and PoW
+     * defenses are enabled we need to initialize the state of the defenses. */
+    if (service->config.has_pow_defenses_enabled &&
+        service->state.pow_defenses_initialized == 0) {
+      initialize_pow_defenses(service);
     }
 
     /* Cleanup invalid intro points from the service descriptor. */
@@ -2911,8 +2935,7 @@ run_housekeeping_event(time_t now)
      * events guaranteeing a valid state. Intro points might be missing from
      * the descriptors after the cleanup but the update/build process will
      * make sure we pick those missing ones. */
-  }
-  FOR_EACH_SERVICE_END;
+  } FOR_EACH_SERVICE_END;
 }
 
 /** Scheduled event run from the main loop. Make sure all descriptors are up to
@@ -3306,9 +3329,11 @@ upload_descriptor_to_all(const hs_service_t *service,
     /* Upload this descriptor to the chosen directory. */
     int is_next_desc = (service->desc_next == desc);
 
-    log_err(LD_REND, "Uploading %s descriptor to HSDir, seed: %s",
+    log_err(LD_REND, "Uploading %s descriptor to HSDir, had seed: %s...",
             (is_next_desc) ? "current" : "next",
-            hex_str(desc->desc->encrypted_data.pow_params->seed, 32)); // HRPR
+            (service->config.has_pow_defenses_enabled)
+                ? hex_str(desc->desc->encrypted_data.pow_params->seed, 4)
+                : "N/A"); // HRPR
     upload_descriptor_to_hsdir(service, desc, hsdir_node);
   }
   SMARTLIST_FOREACH_END(hsdir_rs);
@@ -4575,10 +4600,6 @@ hs_service_new(const or_options_t *options)
   service->state.replay_cache_rend_cookie =
       replaycache_new(REND_REPLAY_TIME_INTERVAL, REND_REPLAY_TIME_INTERVAL);
 
-  /* HRPR TODO I think move this? Initialise the PoW defenses if enabled. */
-  if (service->config.has_pow_defenses_enabled)
-    initialise_pow_defenses(service);
-
   return service;
 }
 
@@ -4599,6 +4620,15 @@ hs_service_free_(hs_service_t *service)
   }
   FOR_EACH_DESCRIPTOR_END;
 
+  /* HRPR Free the state of the PoW defenses. */
+  if (service->state.pow_defenses_initialized) {
+    log_err(LD_REND,
+            "Freeing service with PoW defenses initialized (C: %s...), "
+            "freeing pow_state...",
+            hex_str(service->state.pow_state->seed_current, 4));
+    free_pow_state(service);
+  }
+
   /* Free service configuration. */
   service_clear_config(&service->config);
 
@@ -4610,13 +4640,6 @@ hs_service_free_(hs_service_t *service)
   /* Free onionbalance subcredentials (if any) */
   if (service->state.ob_subcreds) {
     tor_free(service->state.ob_subcreds);
-  }
-
-  /* HRPR: Free PoW rendezvous pqueue (if exists) */
-  // TODO do we need to go through the list and free? or free when we pop?
-  if (service->state.pow_state->rend_circuit_pqueue) {
-    log_err(LD_REND, "Freeing rend_circuit_pqueue");
-    smartlist_free(service->state.pow_state->rend_circuit_pqueue);
   }
 
   /* Free metrics object. */

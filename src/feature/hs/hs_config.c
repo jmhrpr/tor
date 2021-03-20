@@ -276,6 +276,8 @@ config_has_invalid_options(const config_line_t *line_,
     "HiddenServiceEnableIntroDoSRatePerSec",
     "HiddenServiceEnableIntroDoSBurstPerSec",
     "HiddenServiceOnionBalanceInstance",
+    /* HRPR */
+    "HiddenServicePoWDefensesEnabled",
     NULL /* End marker. */
   };
 
@@ -427,6 +429,11 @@ config_service_v3(const hs_opts_t *hs_opts,
     }
   }
 
+  /* HRPR Are the PoW anti-DoS defenses enabled? */
+  config->has_pow_defenses_enabled = hs_opts->HiddenServicePoWDefensesEnabled;
+  log_err(LD_REND, "Parsed config, PoW defenses are %s.",
+          config->has_pow_defenses_enabled ? "enabled" : "disabled");
+
   /* We do not load the key material for the service at this stage. This is
    * done later once tor can confirm that it is in a running state. */
 
@@ -541,6 +548,7 @@ static int
 config_service(config_line_t *line, const or_options_t *options,
                smartlist_t *service_list)
 {
+  log_err(LD_REND, "config_service.");
   int ret;
   hs_service_t *service = NULL;
   hs_opts_t *hs_opts = NULL;

@@ -311,6 +311,12 @@ typedef struct hs_service_state_t {
 
   /** HRPR State of the PoW defenses, which may be enabled dynamically. */
   hs_service_pow_state_t *pow_state;
+
+  /** HRPR TODO True once the PoW defenses have been initialized. Didn't want
+   * to do this but having issues with state being reset on SIGHUP etc. This
+   * saves us from needing to allocate memory for the PoW state if it is not
+   * needed. */
+  unsigned int pow_defenses_initialized : 1;
 } hs_service_state_t;
 
 /** Representation of a service running on this tor instance. */

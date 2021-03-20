@@ -485,20 +485,19 @@ build_introduce1_encrypted_extensions(const hs_pow_solution_t *pow_solution)
   int ret;
   trn_cell_extension_t *extensions;
 
-  // tor_assert(pow_solution);
-
   extensions = trn_cell_extension_new();
   trn_cell_extension_set_num(extensions, 0);
 
-  // If PoW solution present then include it in the cell extensions
-  // TODO better check?
-  if (pow_solution->effort != 0) {
+  /* If PoW solution present then include it in the cell extensions. */
+  if (pow_solution != NULL) {
     log_err(LD_REND, "Building PoW solution extension...");
     ret = build_introduce1_encrypted_pow_extension(pow_solution, extensions);
     if (ret < 0) {
       /* Return no extensions on error. */
       goto end;
     }
+  } else {
+    log_err(LD_REND, "No PoW solution, not building cell extension...");
   }
 
 end:

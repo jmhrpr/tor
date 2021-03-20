@@ -132,7 +132,7 @@ solve_pow(hs_desc_pow_params_t *pow_params,
 
   /* Initialise EquiX and blake2b. */
   uint8_t success = 0;
-  uint64_t count = 0;
+  uint64_t count = 1;
 
   equix_ctx *ctx = NULL;
   equix_solution solution[EQUIX_MAX_SOLS];

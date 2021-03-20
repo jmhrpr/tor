@@ -768,7 +768,7 @@ get_inner_encrypted_layer_plaintext(const hs_descriptor_t *desc)
      * "pow-params" SP type SP seed-b64 SP expiration-time NL */
     if (desc->encrypted_data.pow_params_present) {
       /* Base64 the seed */
-      log_err(LD_REND, "PoW params present in descriptor. Encoding them.");
+      log_err(LD_REND, "PoW params present in descriptor object. Encoding them.");
       seed_b64_len = base64_encode_size(HS_POW_SEED_LEN, 0) + 1;
       seed_b64 = tor_malloc_zero(seed_b64_len);
       ret_len = base64_encode(seed_b64, seed_b64_len,
@@ -2842,6 +2842,13 @@ hs_desc_encrypted_data_free_contents(hs_desc_encrypted_data_t *desc)
                       hs_desc_intro_point_free(ip));
     smartlist_free(desc->intro_points);
   }
+
+  /* HRPR */
+  if (desc->pow_params_present) {
+    log_err(LD_REND, "Freeing pow_params in a descriptor...");
+    tor_free(desc->pow_params);
+  }
+
   memwipe(desc, 0, sizeof(*desc));
 }
 
