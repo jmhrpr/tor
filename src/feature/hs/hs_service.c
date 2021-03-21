@@ -2191,6 +2191,24 @@ update_pow_defenses(time_t now) {
     hs_service_pow_state_t *pow_state = service->state.pow_state;
     hs_desc_encrypted_data_t *encrypted;
 
+    /* If PoW defenses have been disabled after previously being enabled, i.e
+     * via config change and SIGHUP, we need to remove the PoW parameters from
+     * the descriptors so clients stop attempting to solve the puzzle. */
+    FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
+      if (!service->config.has_pow_defenses_enabled &&
+          desc->desc->encrypted_data.pow_params_present) {
+        log_err(LD_REND, "PoW defenses have been disabled, clearing "
+                        "pow_params from a descriptor.");
+
+        desc->desc->encrypted_data.pow_params_present = 0;
+        tor_free(desc->desc->encrypted_data.pow_params);
+
+        /* Schedule for upload here as we can skip the following checks as PoW
+         * defenses are disabled. */
+        service_desc_schedule_upload(desc, now, 1);
+      }
+    } FOR_EACH_DESCRIPTOR_END;
+
     /* Skip this service if PoW defenses are not currently enabled. */
     if (!service->config.has_pow_defenses_enabled)
       continue;
@@ -2198,8 +2216,7 @@ update_pow_defenses(time_t now) {
     /* If this is a new service or PoW defenses were just enabled we need to
      * initialise pow_params in the descriptors. */
     FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
-      if (service->config.has_pow_defenses_enabled &&
-          !desc->desc->encrypted_data.pow_params_present) {
+      if (!desc->desc->encrypted_data.pow_params_present) {
         log_err(LD_REND, "Initializing pow_params in descriptor...");
         encrypted = &desc->desc->encrypted_data;
         encrypted->pow_params = tor_malloc_zero(sizeof(hs_desc_pow_params_t));
@@ -2226,7 +2243,7 @@ update_pow_defenses(time_t now) {
      * since we last did so, and signal if the descriptors were updated. */
     if (now >= pow_state->next_effort_update) {
       if (update_suggested_effort(service))
-      descs_updated = 1;
+        descs_updated = 1;
     }
 
     if (descs_updated) {
@@ -3560,7 +3577,6 @@ static void
 refresh_service_descriptor(const hs_service_t *service,
                            hs_service_descriptor_t *desc, time_t now)
 {
-  log_err(LD_REND, "refresh_service_descriptor...");
   /* There are few fields that we consider "mutable" in the descriptor meaning
    * we need to update them regularly over the lifetime for the descriptor.
    * The rest are set once and should not be modified.

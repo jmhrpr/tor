@@ -548,7 +548,6 @@ static int
 config_service(config_line_t *line, const or_options_t *options,
                smartlist_t *service_list)
 {
-  log_err(LD_REND, "config_service.");
   int ret;
   hs_service_t *service = NULL;
   hs_opts_t *hs_opts = NULL;
