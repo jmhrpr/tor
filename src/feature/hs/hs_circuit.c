@@ -1083,6 +1083,8 @@ hs_circ_handle_introduce2(const hs_service_t *service,
    * so increment our counter that we've seen one on this intro point. */
   ip->introduce2_count++;
 
+  /* HRPR Add the rendezvous request to the priority queue if PoW defenses are
+   * enabled, otherwise rendezvous as usual. */
   if (service->config.has_pow_defenses_enabled) {
     log_err(LD_REND, "Adding to pqueue with effort: %u", data.pow_effort);
 
@@ -1319,21 +1321,23 @@ compare_rend_request_by_effort_(const void *_a, const void *_b)
     return 1;
 }
 
-// HRPR TODO doc. also "rend_circuit" is probably the wrong name
+/** HRPR: Given the information needed to launch a rendezvous circuit and an
+ * effort value, enqueue the rendezvous request in the service's PoW priority
+ * queue with the effort being the priority. */
 void
 enqueue_rend_circuit(const hs_service_t *service, hs_service_intro_point_t *ip,
                      hs_cell_introduce2_data_t *data,
                      const uint32_t pow_effort)
 {
-  pending_rend_t *rend_circuit = NULL;
+  pending_rend_t *rend_request = NULL;
   hs_service_pow_state_t *pow_state = service->state.pow_state;
 
-  rend_circuit = tor_malloc_zero(sizeof(pending_rend_t));
+  rend_request = tor_malloc_zero(sizeof(pending_rend_t));
 
-  rend_circuit->ip = ip;
-  rend_circuit->data = data;
-  rend_circuit->pow_effort = pow_effort;
-  rend_circuit->idx = -1;
+  rend_request->ip = ip;
+  rend_request->data = data;
+  rend_request->pow_effort = pow_effort;
+  rend_request->idx = -1;
 
   log_err(LD_REND, "Current pqueue length: %d",
           smartlist_len(pow_state->rend_circuit_pqueue));
@@ -1341,13 +1345,13 @@ enqueue_rend_circuit(const hs_service_t *service, hs_service_intro_point_t *ip,
   log_err(LD_REND, "Adding pending rend circuit to pqueue...");
   smartlist_pqueue_add(pow_state->rend_circuit_pqueue,
                        compare_rend_request_by_effort_,
-                       offsetof(pending_rend_t, idx), rend_circuit);
+                       offsetof(pending_rend_t, idx), rend_request);
 
   log_err(LD_REND, "Current pqueue length: %d",
           smartlist_len(pow_state->rend_circuit_pqueue));
 
+  /* Initialize the priority queue event if it hasn't been done so already. */
   if (pow_state->pop_pqueue_ev == NULL) {
-    // init pqueue event.
     log_err(LD_REND, "Initiating pqueue pop event...");
     pow_state->pop_pqueue_ev =
         mainloop_event_new(handle_rend_pqueue_cb, (void *)service);

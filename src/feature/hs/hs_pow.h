@@ -21,6 +21,13 @@ typedef unsigned __int128 uint128_t;
 /* Service updates the suggested effort every HS_UPDATE_PERIOD seconds. */
 #define HS_UPDATE_PERIOD 300 // HRPR TODO Should be consensus
 
+/** Length of random nonce (N) used in the PoW scheme. */
+#define HS_POW_NONCE_LEN 16
+/** Length of an E-quiX solution (S) in bytes. */
+#define HS_POW_EQX_SOL_LEN 16
+/** Length of blake2b hash result (R) used in the PoW scheme. */
+#define HS_POW_HASH_LEN 4
+
 /** HRPR State and parameters of PoW defenses, stored in the service state. */
 typedef struct hs_service_pow_state_t {
   /* If PoW defenses are enabled this is a priority queue containing acceptable

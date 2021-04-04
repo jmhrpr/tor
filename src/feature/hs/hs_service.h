@@ -269,7 +269,7 @@ typedef struct hs_service_config_t {
   uint32_t intro_dos_rate_per_sec;
   uint32_t intro_dos_burst_per_sec;
 
-  /** HRPR: PoW defense against DoS. For the INTRODUCE2 cell extension. */
+  /** HRPR: True iff PoW anti-DoS defenses are enabled. */
   unsigned int has_pow_defenses_enabled : 1;
   uint32_t pow_min_effort;
   uint32_t pow_svc_bottom_capacity;
@@ -312,10 +312,7 @@ typedef struct hs_service_state_t {
   /** HRPR State of the PoW defenses, which may be enabled dynamically. */
   hs_service_pow_state_t *pow_state;
 
-  /** HRPR TODO True once the PoW defenses have been initialized. Didn't want
-   * to do this but having issues with state being reset on SIGHUP etc. This
-   * saves us from needing to allocate memory for the PoW state if it is not
-   * needed. */
+  /** HRPR TODO True once the PoW defenses have been initialized. */
   unsigned int pow_defenses_initialized : 1;
 } hs_service_state_t;
 

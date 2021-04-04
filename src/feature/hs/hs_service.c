@@ -2213,18 +2213,25 @@ update_pow_defenses(time_t now) {
     if (!service->config.has_pow_defenses_enabled)
       continue;
 
-    /* If this is a new service or PoW defenses were just enabled we need to
-     * initialise pow_params in the descriptors. */
     FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
-      if (!desc->desc->encrypted_data.pow_params_present) {
+      encrypted = &desc->desc->encrypted_data;
+      /* If this is a new service or PoW defenses were just enabled we need to
+       * initialise pow_params in the descriptors. If thsi runs the next if
+       * statement will run and set the correct values. */
+      if (!encrypted->pow_params_present) {
         log_err(LD_REND, "Initializing pow_params in descriptor...");
-        encrypted = &desc->desc->encrypted_data;
         encrypted->pow_params = tor_malloc_zero(sizeof(hs_desc_pow_params_t));
-
         encrypted->pow_params_present = 1;
+      }
+
+      /* Update the descriptor if it doesn't reflect the current pow_state, for
+       * example if the defenses have just been enabled or refreshed due to a
+       * SIGHUP. */
+      if (desc->desc->encrypted_data.pow_params->expiration_time !=
+          pow_state->expiration_time) {
         encrypted->pow_params->type = "v1"; // HRPR TODO Only type for now
         memcpy(encrypted->pow_params->seed, &pow_state->seed_current,
-              HS_POW_SEED_LEN);
+               HS_POW_SEED_LEN);
         encrypted->pow_params->suggested_effort = pow_state->suggested_effort;
         encrypted->pow_params->expiration_time = pow_state->expiration_time;
 
@@ -2982,8 +2989,6 @@ run_build_descriptor_event(time_t now)
    * is useful for newly built descriptors. */
   update_all_descriptors_intro_points(now);
 
-  /* HRPR TODO We should probably update the PoW values elsewhere, then just
-   * update the descriptor here. */
   /* HRPR Check if we need to update anything in the PoW defenses. */
   update_pow_defenses(now);
 }

@@ -16,13 +16,6 @@ typedef unsigned __int128 uint128_t;
 #include "feature/hs/hs_pow.h"
 #include "ext/ht.h"
 
-/** Length of random nonce (N) used in the PoW scheme. */
-#define HS_POW_NONCE_LEN 16
-/** Length of blake2b hash result (R) used in the PoW scheme. */
-#define HS_POW_HASH_LEN 4
-/** Number of bytes needed to store an equix solution. */
-#define HS_POW_EQX_SOL_LEN 16
-
 /** Replay cache set up */
 /** Cache entry for (nonce, seed) replay protection. */
 typedef struct nonce_cache_entry_t {
@@ -40,7 +33,7 @@ nonce_cache_entries_eq_(const struct nonce_cache_entry_t *entry1,
          entry1->seed_head == entry2->seed_head;
 }
 
-/** Hash function to hash the (nonce, seed) tuple entry */
+/** Hash function to hash the (nonce, seed) tuple entry. */
 static inline unsigned
 nonce_cache_entry_hash_(const struct nonce_cache_entry_t *ent)
 {
@@ -68,6 +61,8 @@ nonce_cache_entry_has_seed(nonce_cache_entry_t *ent, uint32_t seed_head)
   return ent->seed_head == seed_head;
 }
 
+/** Remove entries from the (nonce, seed) replay cache which are for the seed
+ * beginning with seed_head. */
 void
 scrub_nonce_cache_for_seed(uint32_t seed_head)
 {

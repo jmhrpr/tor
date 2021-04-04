@@ -1138,10 +1138,8 @@ hs_cell_parse_introduce2(hs_cell_introduce2_data_t *data,
     }
   }
 
-  // HRPR Handle extensions.
-  // TODO PoW defense is the only current extension so we can ignore all
-  // extensions if HS hasn't got PoW defenses enabled BUT I don't think we do
-  // something similar for DoS defense so maybe bad practice? For now...
+  /* HRPR Handle extensions. As of now the PoW defense is the only extension so
+   * we only need to do this if we have PoW defenses enabled. */
   if (service->config.has_pow_defenses_enabled) {
     if (handle_introduce2_encrypted_cell_extensions(service, enc_cell, data)) {
       log_err(LD_REND, "handle_introduce2_encrypted_cell_extensions failed.");
