@@ -1,4 +1,4 @@
-**Key Additions to Structs/New Structs**
+### **Key Additions to Structs/New Structs**
 
 *hs_pow.h*:
 
@@ -17,9 +17,13 @@
 
 
 
+---
+
+
+
 ### Technical Overview of Client/Service Interaction with PoW Defenses Enabled
 
-A `+` before function name signifies the function is new in this fork.
+A `+` before function name signifies the function is new in this fork. Searching for temporary tag `HRPR` in code reveals new additions.
 
 **Service: Configuration**
 
