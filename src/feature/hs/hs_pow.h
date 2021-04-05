@@ -28,12 +28,12 @@ typedef unsigned __int128 uint128_t;
 /** Length of blake2b hash result (R) used in the PoW scheme. */
 #define HS_POW_HASH_LEN 4
 
-/** HRPR State and parameters of PoW defenses, stored in the service state. */
+/** State and parameters of PoW defenses, stored in the service state. */
 typedef struct hs_service_pow_state_t {
   /* If PoW defenses are enabled this is a priority queue containing acceptable
    * requests that are awaiting rendezvous circuits to built, where priority is
    * based on the amount of effort that was exerted in the PoW. */
-  smartlist_t *rend_circuit_pqueue;
+  smartlist_t *rend_request_pqueue;
 
   /* HRPR TODO Is this cursed? Including compat_libevent for this. feb 24 */
   /* When PoW defenses are enabled, this event pops rendezvous requests from

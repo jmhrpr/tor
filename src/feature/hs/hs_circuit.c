@@ -1032,7 +1032,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
   time_t elapsed;
   hs_cell_introduce2_data_t data;
 
-  /* HRPR For bodged fix below. feb 25 */
+  /* HRPR TODO For bodged fix below. feb 25 */
   hs_cell_introduce2_data_t *data_copy;
   data_copy = tor_malloc_zero(sizeof(hs_cell_introduce2_data_t));
 
@@ -1090,7 +1090,7 @@ hs_circ_handle_introduce2(const hs_service_t *service,
 
     // HRPR TODO Come back to this bodged fix and think about it more.
     memcpy(data_copy, &data, sizeof(hs_cell_introduce2_data_t));
-    enqueue_rend_circuit(service, ip, data_copy, data_copy->pow_effort);
+    enqueue_rend_request(service, ip, data_copy, data_copy->pow_effort);
 
     /* Successfully added rend circuit to priority queue. */
     ret = 0;
@@ -1325,7 +1325,7 @@ compare_rend_request_by_effort_(const void *_a, const void *_b)
  * effort value, enqueue the rendezvous request in the service's PoW priority
  * queue with the effort being the priority. */
 void
-enqueue_rend_circuit(const hs_service_t *service, hs_service_intro_point_t *ip,
+enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
                      hs_cell_introduce2_data_t *data,
                      const uint32_t pow_effort)
 {
@@ -1340,15 +1340,15 @@ enqueue_rend_circuit(const hs_service_t *service, hs_service_intro_point_t *ip,
   rend_request->idx = -1;
 
   log_err(LD_REND, "Current pqueue length: %d",
-          smartlist_len(pow_state->rend_circuit_pqueue));
+          smartlist_len(pow_state->rend_request_pqueue));
 
   log_err(LD_REND, "Adding pending rend circuit to pqueue...");
-  smartlist_pqueue_add(pow_state->rend_circuit_pqueue,
+  smartlist_pqueue_add(pow_state->rend_request_pqueue,
                        compare_rend_request_by_effort_,
                        offsetof(pending_rend_t, idx), rend_request);
 
   log_err(LD_REND, "Current pqueue length: %d",
-          smartlist_len(pow_state->rend_circuit_pqueue));
+          smartlist_len(pow_state->rend_request_pqueue));
 
   /* Initialize the priority queue event if it hasn't been done so already. */
   if (pow_state->pop_pqueue_ev == NULL) {
@@ -1364,37 +1364,37 @@ enqueue_rend_circuit(const hs_service_t *service, hs_service_intro_point_t *ip,
 void
 handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
 {
-  (void)ev; // Not using the returned event
+  (void)ev; /* Not using the returned event, make compiler happy. */
   hs_service_t *service = arg;
   hs_service_pow_state_t *pow_state = service->state.pow_state;
-  pending_rend_t *rend_circuit = tor_malloc_zero(sizeof(pending_rend_t));
+  pending_rend_t *rend_request = tor_malloc_zero(sizeof(pending_rend_t));
 
   log_err(LD_REND, "Current pqueue length: %d",
-          smartlist_len(pow_state->rend_circuit_pqueue));
+          smartlist_len(pow_state->rend_request_pqueue));
 
   log_err(LD_REND, "Popping from pqueue...");
-  rend_circuit = smartlist_pqueue_pop(pow_state->rend_circuit_pqueue,
+  rend_request = smartlist_pqueue_pop(pow_state->rend_request_pqueue,
                                       compare_rend_request_by_effort_,
                                       offsetof(pending_rend_t, idx));
 
   log_err(LD_REND, "Popped pending rend circuit, which had effort: %u",
-          rend_circuit->pow_effort);
+          rend_request->pow_effort);
 
   log_err(LD_REND, "Current pqueue length: %d",
-          smartlist_len(pow_state->rend_circuit_pqueue));
+          smartlist_len(pow_state->rend_request_pqueue));
 
   log_err(LD_REND, "Launching rendezvous point circuit...");
-  launch_rendezvous_point_circuit(service, rend_circuit->ip,
-                                  rend_circuit->data);
+  launch_rendezvous_point_circuit(service, rend_request->ip,
+                                  rend_request->data);
   log_err(LD_REND, "Finished launching.");
 
   // HRPR TODO Idk if this is correct, check later
-  link_specifier_smartlist_free(rend_circuit->data->link_specifiers);
-  memwipe(rend_circuit->data, 0, sizeof(rend_circuit->data));
+  link_specifier_smartlist_free(rend_request->data->link_specifiers);
+  memwipe(rend_request->data, 0, sizeof(rend_request->data));
 
   /* If there are still some pending rendezvous circuits in the pqueue then
    * reschedule the event in order to continue handling them. */
-  if (smartlist_len(pow_state->rend_circuit_pqueue)) {
+  if (smartlist_len(pow_state->rend_request_pqueue)) {
     log_err(LD_REND, "Still pending circuits in pqueue, reactivating pop event...");
     mainloop_event_activate(pow_state->pop_pqueue_ev);
   }

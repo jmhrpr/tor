@@ -42,7 +42,7 @@
 #define HS_SERVICE_POW_SEED_ROTATE_TIME_MAX (7200)
 // HRPR TODO Testing
 // #define HS_SERVICE_POW_SEED_ROTATE_TIME_MIN (120)
-// #define HS_SERVICE_POW_SEED_ROTATE_TIME_MAX (180)
+// #define HS_SERVICE_POW_SEED_ROTATE_TIME_MAX (121)
 
 /** Collected metrics for a specific service. */
 typedef struct hs_service_metrics_t {

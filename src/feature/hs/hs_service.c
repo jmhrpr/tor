@@ -275,7 +275,7 @@ initialize_pow_defenses(hs_service_t *service) {
   /* Make life easier */
   hs_service_pow_state_t *pow_state = service->state.pow_state;
 
-  pow_state->rend_circuit_pqueue = smartlist_new();
+  pow_state->rend_request_pqueue = smartlist_new();
   pow_state->pop_pqueue_ev = NULL;
 
   pow_state->min_effort = service->config.pow_min_effort;
@@ -317,8 +317,8 @@ initialize_pow_defenses(hs_service_t *service) {
 static void
 free_pow_state(hs_service_t *service)
 {
-  log_err(LD_REND, "Freeing rend_circuit_pqueue...");
-  smartlist_free(service->state.pow_state->rend_circuit_pqueue);
+  log_err(LD_REND, "Freeing rend_request_pqueue...");
+  smartlist_free(service->state.pow_state->rend_request_pqueue);
 
   log_err(LD_REND, "Freeing pop_pqueue_ev mainloop event...");
   mainloop_event_free(service->state.pow_state->pop_pqueue_ev);
@@ -2097,33 +2097,14 @@ rotate_pow_seeds(hs_service_t *service)
   log_err(LD_REND, "New Current C: %s", hex_str(pow_state->seed_current, 32));
   log_err(LD_REND, "New Previous C: %s",
           hex_str(pow_state->seed_previous, 32));
-
-  /* Update the descriptors to reflect the updated seeds. */
-  FOR_EACH_DESCRIPTOR_BEGIN(service, desc)
-  {
-    /* Update the descriptor with the new seed and expiration time. */
-    memcpy(desc->desc->encrypted_data.pow_params->seed,
-           pow_state->seed_current, HS_POW_SEED_LEN);
-
-    desc->desc->encrypted_data.pow_params->expiration_time =
-        pow_state->expiration_time;
-
-    {
-      int is_next_desc = (service->desc_next == desc);
-      log_err(LD_REND, "Updated seeds for %s descriptor.",
-              (is_next_desc) ? "current" : "next");
-    }
-  }
-  FOR_EACH_DESCRIPTOR_END;
 }
 
 /** HRPR: Every HS_UPDATE_PERIOD seconds, and while PoW defenses are enabled,
  * the service updates its suggested effort for PoW solutions as
  * SUGGESTED_EFFORT = TOTAL_EFFORT / (SVC_BOTTOM_CAPACITY * HS_UPDATE_PERIOD)
  * where TOTAL_EFFORT is the sum of the effort of all valid requests that have
- * been received since the suggested_effort was last updated. Returns 1 if the
- * descriptors were updated, 0 otherwise. */
-static int
+ * been received since the suggested_effort was last updated. */
+static void
 update_suggested_effort(hs_service_t *service)
 {
   uint64_t denom;
@@ -2157,39 +2138,18 @@ update_suggested_effort(hs_service_t *service)
   log_err(LD_REND, "Resetting total effort and setting next update time...");
   pow_state->total_effort = 0;
   pow_state->next_effort_update = (time(NULL) + HS_UPDATE_PERIOD);
-
-  /* Services SHOULD NOT upload a new descriptor if the suggested effort value
-   * changes by less than 15 percent. */
-  if (pow_state->suggested_effort <= previous_effort * 0.85 ||
-      previous_effort * 1.15 <= pow_state->suggested_effort) {
-    log_err(LD_REND,
-            "Suggested effort changed significantly, updating descriptors...");
-    FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
-      desc->desc->encrypted_data.pow_params->suggested_effort =
-          pow_state->suggested_effort;
-    } FOR_EACH_DESCRIPTOR_END;
-
-    /* Return 1 to signal that we updated the descriptors so they need
-     * rescheduling for upload. */
-    return 1;
-  }
-
-  /* The change in suggested effort was not significant enough to warrant
-  updating the descriptors, return 0 to reflect they are unchanged. */
-  log_err(LD_REND,
-          "Change in suggested effort didn't warrant updating descriptors.");
-  return 0;
 }
 
 /** HRPR: Update PoW defenses; that is, if the current seed has expired rotate
  * it and/or if the suggested effort is due to be recalculated then do so. In
  * both cases update the descriptors. */
 static int
-update_pow_defenses(time_t now) {
+update_all_descriptors_pow_params(time_t now) {
   FOR_EACH_SERVICE_BEGIN(service) {
     int descs_updated = 0;
     hs_service_pow_state_t *pow_state = service->state.pow_state;
     hs_desc_encrypted_data_t *encrypted;
+    uint32_t previous_effort;
 
     /* If PoW defenses have been disabled after previously being enabled, i.e
      * via config change and SIGHUP, we need to remove the PoW parameters from
@@ -2227,7 +2187,7 @@ update_pow_defenses(time_t now) {
       /* Update the descriptor if it doesn't reflect the current pow_state, for
        * example if the defenses have just been enabled or refreshed due to a
        * SIGHUP. */
-      if (desc->desc->encrypted_data.pow_params->expiration_time !=
+      if (encrypted->pow_params->expiration_time !=
           pow_state->expiration_time) {
         encrypted->pow_params->type = "v1"; // HRPR TODO Only type for now
         memcpy(encrypted->pow_params->seed, &pow_state->seed_current,
@@ -2237,21 +2197,27 @@ update_pow_defenses(time_t now) {
 
         descs_updated = 1;
       }
-    } FOR_EACH_DESCRIPTOR_END;
 
-    /* If the current PoW seed has expired then generate a new current seed,
-     * storing the old one in seed_previous. */
-    if (now >= pow_state->expiration_time) {
-      rotate_pow_seeds(service);
-      descs_updated = 1;
-    }
+      /* Services SHOULD NOT upload a new descriptor if the suggested
+       * effort value changes by less than 15 percent. */
+      previous_effort = encrypted->pow_params->suggested_effort;
+      if (pow_state->suggested_effort <= previous_effort * 0.85 ||
+          previous_effort * 1.15 <= pow_state->suggested_effort) {
+        log_err(
+            LD_REND,
+            "Suggested effort changed significantly, updating descriptors...");
+        encrypted->pow_params->suggested_effort = pow_state->suggested_effort;
 
-    /* Update the suggested effort if HS_UPDATE_PERIOD seconds have passed
-     * since we last did so, and signal if the descriptors were updated. */
-    if (now >= pow_state->next_effort_update) {
-      if (update_suggested_effort(service))
         descs_updated = 1;
-    }
+      } else if (previous_effort != pow_state->suggested_effort) {
+        /* The change in suggested effort was not significant enough to
+        warrant updating the descriptors, return 0 to reflect they are
+        unchanged. */
+        log_err(
+            LD_REND,
+            "Change in suggested effort didn't warrant updating descriptors.");
+      }
+    } FOR_EACH_DESCRIPTOR_END;
 
     if (descs_updated) {
       FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
@@ -2946,11 +2912,26 @@ run_housekeeping_event(time_t now)
       set_rotation_time(service);
     }
 
-    /* HRPR If the service is starting off or just been reset (?) and and PoW
-     * defenses are enabled we need to initialize the state of the defenses. */
-    if (service->config.has_pow_defenses_enabled &&
-        service->state.pow_defenses_initialized == 0) {
-      initialize_pow_defenses(service);
+    /* HRPR Check if we need to initialize or update PoW parameters, if the
+     * defenses are enabled. */
+    if (service->config.has_pow_defenses_enabled) {
+      /* If the service is starting off or just been reset we need to
+       * initialize the state of the defenses. */
+      if (!service->state.pow_defenses_initialized) {
+        initialize_pow_defenses(service);
+      }
+
+      /* If the current PoW seed has expired then generate a new current
+       * seed, storing the old one in seed_previous. */
+      if (now >= service->state.pow_state->expiration_time) {
+        rotate_pow_seeds(service);
+      }
+
+      /* Update the suggested effort if HS_UPDATE_PERIOD seconds have passed
+       * since we last did so. */
+      if (now >= service->state.pow_state->next_effort_update) {
+        update_suggested_effort(service);
+      }
     }
 
     /* Cleanup invalid intro points from the service descriptor. */
@@ -2990,7 +2971,7 @@ run_build_descriptor_event(time_t now)
   update_all_descriptors_intro_points(now);
 
   /* HRPR Check if we need to update anything in the PoW defenses. */
-  update_pow_defenses(now);
+  update_all_descriptors_pow_params(now);
 }
 
 /** For the given service, launch any intro point circuits that could be

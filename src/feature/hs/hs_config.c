@@ -276,8 +276,7 @@ config_has_invalid_options(const config_line_t *line_,
     "HiddenServiceEnableIntroDoSRatePerSec",
     "HiddenServiceEnableIntroDoSBurstPerSec",
     "HiddenServiceOnionBalanceInstance",
-    /* HRPR */
-    "HiddenServicePoWDefensesEnabled",
+    "HiddenServicePoWDefensesEnabled", /* HRPR */
     NULL /* End marker. */
   };
 
