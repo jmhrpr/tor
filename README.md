@@ -1,10 +1,9 @@
-**Key additions to structs/new structs:**
+**Key Additions to Structs/New Structs**
 
 *hs_pow.h*:
 
 - `hs_service_pow_state_t`: holds all the up-to-date parameters for/state of the PoW defenses, including the pqueue, the mainloop event to pop the pqueue, seeds, suggested effort, nonce/seed hash table replay cache...
 - `hs_pow_solution_t`: stores a solution to the PoW puzzle (nonce, effort, first 4 bytes of seed, Equi-X solution)
-- 
 
 *hs_service.h*: 
 
@@ -18,9 +17,12 @@
 
 
 
-### Overview of Client/Service Interaction with PoW Defenses Enabled
+### Technical Overview of Client/Service Interaction with PoW Defenses Enabled
+
+A `+` before function name signifies the function is new in this fork.
 
 **Service: Configuration**
+
 *config.c*:
 
 - new `VAR(HiddenServicePoWDefensesEnabled)` option for torrc
@@ -47,20 +49,19 @@
 *hs_descriptor*:
 
    - new struct `hs_desc_pow_params_t` in *hs_descriptor.h* containing PoW scheme type, seed, suggested effort and expiration time
-
    - `hs_desc_encrypted_data_t` now stores a `hs_desc_pow_params_t` struct and a flag `pow_params_present` to signal if the encrypted data contains PoW parameters
-
    - new `'pow-params'` string/token rule `R3_POW_PARAMS`
-
    - `get_inner_encrypted_layer_plaintext()` now, if PoW params are present in the descriptor, encodes the type, seed, suggested effort and expiration time before the intro points in `"pow-params" SP type SP seed-b64 SP expiration-time NL` format.
 
-        
+
+
+
 
 **Client: Fetching & parsing descriptor**
 
 *hs_descriptor.c*:
 
-      - `desc_decode_encrypted_v3()` parses PoW params from the descriptor by detecting the `'pow-params'` keyword token and then calling `+decode_pow_params()` which handles decoding the type, seed, effort and expiration time into the output descriptor object, also sets `pow_params_present` flag in the descriptor.
+- `desc_decode_encrypted_v3()` parses PoW params from the descriptor by detecting the `'pow-params'` keyword token and then calling `+decode_pow_params()` which handles decoding the type, seed, effort and expiration time into the output descriptor object, also sets `pow_params_present` flag in the descriptor.
 
 *hs_client.c*:
 
@@ -72,13 +73,13 @@
 
 *hs_pow.c*:
 
-      - `+solve_pow()` generates a random nonce, currently just uses the service's suggested effort, builds the challenge by concatenating the seed, nonce and effort then begins attempting to solve the proof of work: solving the Equi-X problem then computing a 4 byte blake2b hash and checking that the product of the hash and the effort is less than equal to `UINT32_MAX`, incrementing the nonce and retrying if not. once a nonce is found the PoW solution is populated with the nonce, effort, first 4 bytes of the seed and the Equi-X solution that resulted in the valid PoW solution.
+- `+solve_pow()` generates a random nonce, currently just uses the service's suggested effort, builds the challenge by concatenating the seed, nonce and effort then begins attempting to solve the proof of work: solving the Equi-X problem then computing a 4 byte blake2b hash and checking that the product of the hash and the effort is less than equal to `UINT32_MAX`, incrementing the nonce and retrying if not. once a nonce is found the PoW solution is populated with the nonce, effort, first 4 bytes of the seed and the Equi-X solution that resulted in the valid PoW solution.
 
 **Client: Build INTRODUCE1 cell extension**
 
 *hs_client.c*:
 
-      - `hs_circ_send_introduce1()` takes the PoW solution computed above as an argument, which in turn passes it to `hs_cell_build_introduce1()` in *hs_cell.c*.    
+- `hs_circ_send_introduce1()` takes the PoW solution computed above as an argument, which in turn passes it to `hs_cell_build_introduce1()` in *hs_cell.c*.    
 
 *hs_cell.c*:
 
@@ -98,5 +99,5 @@
 
 *hs_circuit.c*:
 
-      - if the PoW defenses are enabled, at the end of `hs_circ_handle_introduce2()` instead of calling `launch_rendezvous_point_circuit(service, ip, data)`, we call `+enqueue_rend_request(service, ip, data, effort)` to add the rendezvous request to the service's priority queue with the effort being the priority. the "pending rendezvous request" is stored in a new struct `pending_rend_t` which stores the intropoint, data, effort and a index for the position of the request in the priority queue heap. the `pending_rend_t` object is then added to the service's `rend_request_pqueue`, a smartlist priority queue maintained in the service's PoW state, using the entry comparison function `+compare_rend_request_by_effort_()`. after the rendezvous request is added to the priority queue we activate (and initiate if it hasn't been initiated yet) a new mainloop event `pop_pqueue_ev`, also stored in the service's PoW state, which calls new callback function `+handle_rend_pqueue_cb()` with the service as being passed as the argument.
-            - `+handle_rend_pqueue_cb()` is thus called from the mainloop and pops the rendezvous request from the front of the priority queue and finally calls `launch_rendezvous_point_circuit()` as normal to connect to the client. if the priority queue still contains pending rendezvous requests the `pop_pqueue_ev` event is activated again.
+- if the PoW defenses are enabled, at the end of `hs_circ_handle_introduce2()` instead of calling `launch_rendezvous_point_circuit(service, ip, data)`, we call `+enqueue_rend_request(service, ip, data, effort)` to add the rendezvous request to the service's priority queue with the effort being the priority. the "pending rendezvous request" is stored in a new struct `pending_rend_t` which stores the intropoint, data, effort and a index for the position of the request in the priority queue heap. the `pending_rend_t` object is then added to the service's `rend_request_pqueue`, a smartlist priority queue maintained in the service's PoW state, using the entry comparison function `+compare_rend_request_by_effort_()`. after the rendezvous request is added to the priority queue we activate (and initiate if it hasn't been initiated yet) a new mainloop event `pop_pqueue_ev`, also stored in the service's PoW state, which calls new callback function `+handle_rend_pqueue_cb()` with the service as being passed as the argument.
+- `+handle_rend_pqueue_cb()` is thus called from the mainloop and pops the rendezvous request from the front of the priority queue and finally calls `launch_rendezvous_point_circuit()` as normal to connect to the client. if the priority queue still contains pending rendezvous requests the `pop_pqueue_ev` event is activated again.
