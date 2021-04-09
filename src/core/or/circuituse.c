@@ -797,8 +797,7 @@ circuit_expire_building(void)
       case CIRCUIT_PURPOSE_C_INTRODUCE_ACK_WAIT:
       case CIRCUIT_PURPOSE_C_REND_READY_INTRO_ACKED:
         /* If we have reached this line, we want to spare the circ for now. */
-        log_info(LD_CIRC,
-                 "Marking circ %u (state %d:%s, purpose %d) "
+        log_info(LD_CIRC,"Marking circ %u (state %d:%s, purpose %d) "
                  "as timed-out HS%s circ",
                  (unsigned)victim->n_circ_id, victim->state,
                  circuit_state_to_string(victim->state), victim->purpose,

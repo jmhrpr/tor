@@ -252,7 +252,7 @@ handle_establish_intro_cell_dos_extension(
                                 const trn_cell_extension_field_t *field,
                                 or_circuit_t *circ)
 {
-  ssize_t ret = -1;
+  ssize_t ret;
   uint64_t intro2_rate_per_sec = 0, intro2_burst_per_sec = 0;
   trn_cell_extension_dos_t *dos = NULL;
 
