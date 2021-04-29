@@ -136,7 +136,7 @@ solve_pow(hs_desc_pow_params_t *pow_params,
   uint8_t hash_result[HS_POW_HASH_LEN];
   blake2b_state S[1];
 
-  /* Repeatedly increment the nonce in attempt to find a valid solution. */
+  /* Repeatedly increment the nonce until we find a valid solution. */
   log_err(LD_REND, "Solving proof of work...");
   while (success == 0) {
     /* Calculate S = equix_solve(C || N || E) */
@@ -147,8 +147,6 @@ solve_pow(hs_desc_pow_params_t *pow_params,
     equix_result result =
         equix_verify(ctx, challenge, challenge_len, &solution[0]);
     if (!(result == EQUIX_OK)) {
-      // log_err(LD_REND, "EquiX failed. Count: %u, Result: %u, Num sol: %u",
-      // count, result, num_solutions);
       nonce++;
       count++;
       memcpy(challenge + sizeof(pow_params->seed), &nonce, HS_POW_NONCE_LEN);

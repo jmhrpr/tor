@@ -644,7 +644,8 @@ send_introduce1(origin_circuit_t *intro_circ,
     pow_solution = tor_malloc_zero(sizeof(hs_pow_solution_t));
     log_err(LD_REND, "PoW params present in descriptor.");
     /* If the PoW params in the descriptor have expired then maybe we have a
-    cached version, so we should refetch and try again. */
+     * cached version, so we should refetch and try again. HRPR TODO is this
+     * redundant? we already check when fetching */
     if (time(NULL) > desc->encrypted_data.pow_params->expiration_time) {
       log_err(LD_REND,
               "PoW params in the descriptor have expired, transient error.");
@@ -1440,10 +1441,8 @@ client_desc_has_arrived(const smartlist_t *entry_conns)
 
     /* HRPR TODO Clean below up into a function like intro_points_usable? */
     if (desc->encrypted_data.pow_params_present) {
-      if (desc->encrypted_data.pow_params->expiration_time <
-          time(NULL)) {
-        log_err(LD_REND,
-                "PoW params in descriptor has expired.");
+      if (desc->encrypted_data.pow_params->expiration_time < now) {
+        log_err(LD_REND, "PoW params in fetched descriptor have expired.");
         descriptor_is_usable = 0;
       } else {
         /* Note the connection is dealing with a HS with PoW defenses. */

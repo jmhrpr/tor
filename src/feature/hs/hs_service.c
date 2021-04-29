@@ -2144,9 +2144,9 @@ update_suggested_effort(hs_service_t *service)
   pow_state->next_effort_update = (time(NULL) + HS_UPDATE_PERIOD);
 }
 
-/** HRPR: Update PoW defenses; that is, if the current seed has expired rotate
- * it and/or if the suggested effort is due to be recalculated then do so. In
- * both cases update the descriptors. */
+/** HRPR: Update or initialise PoW parameters in the descriptors if they do not
+ * reflect the current state of the PoW defenses. If the defenses have been
+ * disabled then remove the PoW parameters from the descriptors. */
 static int
 update_all_descriptors_pow_params(time_t now) {
   FOR_EACH_SERVICE_BEGIN(service) {
@@ -2173,14 +2173,14 @@ update_all_descriptors_pow_params(time_t now) {
       }
     } FOR_EACH_DESCRIPTOR_END;
 
-    /* Skip this service if PoW defenses are not currently enabled. */
+    /* Skip remaining checks if this service does not have PoW defenses enabled. */
     if (!service->config.has_pow_defenses_enabled)
       continue;
 
     FOR_EACH_DESCRIPTOR_BEGIN(service, desc) {
       encrypted = &desc->desc->encrypted_data;
       /* If this is a new service or PoW defenses were just enabled we need to
-       * initialise pow_params in the descriptors. If thsi runs the next if
+       * initialise pow_params in the descriptors. If this runs the next if
        * statement will run and set the correct values. */
       if (!encrypted->pow_params_present) {
         log_err(LD_REND, "Initializing pow_params in descriptor...");
@@ -2190,7 +2190,7 @@ update_all_descriptors_pow_params(time_t now) {
 
       /* Update the descriptor if it doesn't reflect the current pow_state, for
        * example if the defenses have just been enabled or refreshed due to a
-       * SIGHUP. */
+       * SIGHUP. HRPR TODO: Don't check using expiration time? */
       if (encrypted->pow_params->expiration_time !=
           pow_state->expiration_time) {
         encrypted->pow_params->type = "v1"; // HRPR TODO Only type for now

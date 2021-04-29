@@ -1358,6 +1358,8 @@ enqueue_rend_request(const hs_service_t *service, hs_service_intro_point_t *ip,
   }
 
   log_err(LD_REND, "Activating pqueue pop event...");
+  // HRPR TODO - Dodgy logic? I think we are activating this too many times if
+  // we also activate on pops
   mainloop_event_activate(pow_state->pop_pqueue_ev);
 }
 
@@ -1394,10 +1396,11 @@ handle_rend_pqueue_cb(mainloop_event_t *ev, void *arg)
 
   /* If there are still some pending rendezvous circuits in the pqueue then
    * reschedule the event in order to continue handling them. */
-  if (smartlist_len(pow_state->rend_request_pqueue)) {
-    log_err(LD_REND, "Still pending circuits in pqueue, reactivating pop event...");
-    mainloop_event_activate(pow_state->pop_pqueue_ev);
-  }
+  // HRPR TODO Disabled for now. See above.
+  // if (smartlist_len(pow_state->rend_request_pqueue)) {
+  //   log_err(LD_REND, "Still pending circuits in pqueue, reactivating pop event...");
+  //   mainloop_event_activate(pow_state->pop_pqueue_ev);
+  // }
 }
 
 /** Circuit cleanup strategy:

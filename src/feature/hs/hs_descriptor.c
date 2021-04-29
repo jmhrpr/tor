@@ -786,11 +786,12 @@ get_inner_encrypted_layer_plaintext(const hs_descriptor_t *desc)
       smartlist_add_asprintf(lines, "%s\n", str_single_onion);
     }
 
-    /* HRPR: Encode PoW params in the following format:
+    /* HRPR: Encode PoW params (if they are present) in the following format:
      * "pow-params" SP type SP seed-b64 SP expiration-time NL */
     if (desc->encrypted_data.pow_params_present) {
       /* Base64 the seed */
-      log_err(LD_REND, "PoW params present in descriptor object. Encoding them.");
+      log_err(LD_REND,
+              "PoW params present in descriptor object. Encoding them.");
       seed_b64_len = base64_encode_size(HS_POW_SEED_LEN, 0) + 1;
       seed_b64 = tor_malloc_zero(seed_b64_len);
       ret_len = base64_encode(seed_b64, seed_b64_len,
@@ -800,12 +801,12 @@ get_inner_encrypted_layer_plaintext(const hs_descriptor_t *desc)
       /* Return length doesn't count the NUL byte. */
       tor_assert(ret_len == (seed_b64_len - 1));
 
-      /* Convert the expiration time to spaceless ISO format. */
+      /* Convert the expiration time to space-less ISO format. */
       format_iso_time_nospace(
           time_buf, desc->encrypted_data.pow_params->expiration_time);
       log_err(LD_REND, "Encoded time: %s", time_buf);
 
-      /* Add "pow-params" line to descriptor. */
+      /* Add "pow-params" line to descriptor encoding. */
       smartlist_add_asprintf(lines, "%s %s %s %u %s\n", str_pow_params,
                              desc->encrypted_data.pow_params->type, seed_b64,
                              desc->encrypted_data.pow_params->suggested_effort,
@@ -1325,7 +1326,7 @@ decode_pow_params(const directory_token_t *tok,
   pow_params->suggested_effort = effort;
   log_err(LD_REND, "PoW suggested effort: %d", pow_params->suggested_effort);
 
-  /* Expiration time: do we need to store this or just a check sufficient? */
+  /* Parse the expiration time of the PoW params. */
   time_t expiration_time = 0;
   if (parse_iso_time_nospace(tok->args[3], &expiration_time)) {
     log_warn(LD_REND, "Unparseable expiration time %s in PoW params",
@@ -1335,10 +1336,12 @@ decode_pow_params(const directory_token_t *tok,
   pow_params->expiration_time = expiration_time;
   log_err(LD_REND, "Decoded PoW expiration time: %ld",
           pow_params->expiration_time);
-  if (time(NULL) >= expiration_time) {
-    log_warn(LD_REND, "PoW params have expired. Fetch new descriptor.");
-    goto done;
-  }
+
+  /* HRPR TODO, this is handled in client->client_desc_has_arrived */
+  // if (time(NULL) >= expiration_time) {
+  //   log_warn(LD_REND, "PoW params have expired. Fetch new descriptor.");
+  //   goto done;
+  // }
 
   ret = 0;
 done:
@@ -2468,7 +2471,7 @@ desc_decode_encrypted_v3(const hs_descriptor_t *desc,
     desc_encrypted_out->pow_params = pow_params;
   } else {
     log_err(LD_REND, "No PoW params found.");
-    desc_encrypted_out->pow_params_present = 0;
+    desc_encrypted_out->pow_params_present = 0; // HRPR TODO needed?
   }
 
   /* Initialize the descriptor's introduction point list before we start
